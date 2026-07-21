@@ -233,8 +233,25 @@ export default function App() {
     };
   }, [items]);
 
-  const categories = useMemo(() => ['connectivity', 'storage', 'peripherals', 'electronics', 'tools', 'organization', 'toner', 'consumables'], []);
-  const divisions = useMemo(() => ['บริหาร', 'วิเคราะห์', 'ประชาสัมพันธ์', 'สถิติ'], []);
+  const categories = useMemo(() => {
+    const set = new Set();
+    items.forEach(item => {
+      if (item.category) set.add(item.category);
+    });
+    return Array.from(set);
+  }, [items]);
+
+  const divisions = useMemo(() => {
+    const set = new Set();
+    items.forEach(item => {
+      if (item.division) {
+        let divClean = item.division.trim();
+        if (divClean === 'ปชส.' || divClean === 'ปชส. 3') divClean = 'ประชาสัมพันธ์';
+        set.add(divClean);
+      }
+    });
+    return Array.from(set);
+  }, [items]);
 
   // Filtering, Instant Search & Sorting Logic
   const filteredItems = useMemo(() => {
