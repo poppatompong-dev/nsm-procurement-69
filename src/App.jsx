@@ -7,7 +7,13 @@ import {
   Share2, 
   RotateCcw,
   ShieldCheck,
-  ArrowRight
+  ArrowRight,
+  BookOpen,
+  HelpCircle,
+  CheckCircle2,
+  FileSpreadsheet,
+  Download,
+  Printer
 } from 'lucide-react';
 
 // Import initial dataset
@@ -401,6 +407,7 @@ export default function App() {
                 ? 'bg-gov-gold text-gov-navy shadow-sm' 
                 : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
             }`}
+            title="ดูสถิติงบประมาณ ความก้าวหน้าตรวจรับ และคิวตรวจสอบด่วน"
           >
             <LayoutDashboard className="w-4 h-4 shrink-0" />
             แผงควบคุมสรุปผล
@@ -413,6 +420,7 @@ export default function App() {
                 ? 'bg-gov-gold text-gov-navy shadow-sm' 
                 : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
             }`}
+            title="เดินตรวจสเปกครุภัณฑ์ บันทึก S/N และแนบรูปถ่ายหลักฐานทีละชิ้น"
           >
             <PackageCheck className="w-4 h-4 shrink-0" />
             ตรวจรับพัสดุรายชิ้น
@@ -425,6 +433,7 @@ export default function App() {
                 ? 'bg-gov-gold text-gov-navy shadow-sm' 
                 : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
             }`}
+            title="ดูตัวอย่างเอกสารรายงานพิมพ์แนบท้ายมีตราครุฑ และดาวน์โหลดข้อมูลเป็นตาราง"
           >
             <FileText className="w-4 h-4 shrink-0" />
             ระบบเอกสารพิมพ์งาน
@@ -437,9 +446,23 @@ export default function App() {
                 ? 'bg-gov-gold text-gov-navy shadow-sm' 
                 : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
             }`}
+            title="อัปโหลดตารางรายการจัดซื้อ Excel เพื่อเปลี่ยนฐานข้อมูลตรวจพัสดุโครงการใหม่"
           >
             <UploadCloud className="w-4 h-4 shrink-0" />
             นำเข้าสเปกพัสดุ
+          </button>
+
+          <button
+            onClick={() => setActiveTab('manual')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
+              activeTab === 'manual' 
+                ? 'bg-gov-gold text-gov-navy shadow-sm' 
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
+            }`}
+            title="เปิดคู่มือสอนการใช้งานระบบแบบทีละขั้นตอนและข้อเสนอแนะจัดซื้อ"
+          >
+            <BookOpen className="w-4 h-4 shrink-0 text-gov-gold" />
+            คู่มือแนะนำการใช้งาน
           </button>
         </nav>
 
@@ -457,6 +480,7 @@ export default function App() {
                   ? 'bg-emerald-700 border-emerald-700 text-white' 
                   : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
               }`}
+              title="คัดลอกลิงก์สถานะล่าสุดส่งต่อให้กรรมการท่านอื่นเปิดสืบค้นหรือพิมพ์เอกสารได้ทันที"
             >
               <Share2 className="w-3 h-3 text-gov-gold" />
               แชร์ผลตรวจ
@@ -464,7 +488,7 @@ export default function App() {
             <button
               onClick={handleResetDatabase}
               className="px-3 py-2.5 bg-slate-800 border border-slate-700 hover:bg-rose-950 hover:border-rose-900 text-slate-300 hover:text-rose-100 rounded-xl text-[10px] font-bold transition-colors cursor-pointer"
-              title="รีเซ็ตฐานข้อมูล"
+              title="รีเซ็ตผลตรวจสอบและประวัติทั้งหมดกลับเป็นค่าเริ่มต้นสัญญา"
             >
               <RotateCcw className="w-3 h-3" />
             </button>
@@ -485,15 +509,16 @@ export default function App() {
               {activeTab === 'items' && 'ระบบตรวจทานพัสดุและภาพถ่ายหลักฐาน'}
               {activeTab === 'report' && 'ระบบออกรายงานและหนังสือส่งมอบอย่างเป็นทางการ'}
               {activeTab === 'importer' && 'เครื่องมือนำเข้าใบเสนอราคาพลวัต (Excel Importer)'}
+              {activeTab === 'manual' && '📖 คู่มือแนะแนวการใช้งานสำหรับเจ้าหน้าที่จัดซื้อตรวจรับ'}
             </h2>
           </div>
           
           <div className="hidden sm:flex items-center gap-4 text-xs font-bold text-neutral-slate">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5" title="จำนวนพัสดุตรวจผ่านแล้ว">
               <span className="w-2 h-2 rounded-full bg-status-passed"></span>
               ผ่านแล้ว: <span className="text-gov-navy num-tabular">{stats.passedCount}/{stats.totalItems}</span>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5" title="งบประมาณจัดซื้อจัดจ้างโครงการ">
               <span className="w-2 h-2 rounded-full bg-gov-gold"></span>
               งบรวม: <span className="text-gov-navy num-tabular">{formatNumber(stats.totalBudget)} บาท</span>
             </div>
@@ -653,6 +678,7 @@ export default function App() {
                                   <button 
                                     onClick={() => setSelectedItem(item)}
                                     className="px-2.5 py-1 bg-gov-blue hover:bg-gov-navy text-white text-[10px] font-bold rounded-lg transition-colors cursor-pointer"
+                                    title="เปิดพื้นที่ตรวจรับพัสดุและแนบหลักฐานสำหรับสินค้าชิ้นนี้"
                                   >
                                     เปิด
                                   </button>
@@ -712,6 +738,92 @@ export default function App() {
           {/* Tab 4: Excel Importer Panel */}
           {activeTab === 'importer' && (
             <ExcelImporter onImport={handleImportExcel} />
+          )}
+
+          {/* Tab 5: Built-in User Manual (📖 คู่มือแนะนำการใช้งาน) */}
+          {activeTab === 'manual' && (
+            <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
+              
+              {/* Manual Hero Banner */}
+              <div className="relative bg-gradient-to-r from-gov-navy to-gov-blue rounded-3xl p-6 text-white border border-slate-800 shadow-premium overflow-hidden">
+                <span className="absolute top-0 right-0 w-32 h-32 bg-gov-gold-light rounded-full opacity-5 translate-x-12 -translate-y-12"></span>
+                <span className="absolute bottom-0 left-0 right-0 h-1.5 bg-gov-gold"></span>
+                <div className="space-y-2 relative z-10">
+                  <h3 className="text-base sm:text-lg font-black flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-gov-gold" />
+                    คู่มือแนะนำความรู้และวิธีปฏิบัติระบบตรวจรับพัสดุ
+                  </h3>
+                  <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                    ระบบสารสนเทศนี้พัฒนาขึ้นภายใต้ พ.ร.บ. การจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ เพื่อช่วยอำนวยความสะดวกในการจัดหมวดหมู่ ลงชื่อ และเก็บรูปถ่ายหลักฐานพัสดุครุภัณฑ์คอมพิวเตอร์ กองยุทธศาสตร์และงบประมาณ เทศบาลนครนครสวรรค์
+                  </p>
+                </div>
+              </div>
+
+              {/* Step by Step Manual Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* Section 1: Excel Importer Guide */}
+                <div className="bg-white p-6 rounded-3xl shadow-premium border border-slate-100 space-y-3 hover:border-gov-gold/30 transition-all duration-300 relative group">
+                  <span className="absolute top-4 right-4 w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-gov-gold group-hover:bg-gov-gold-light transition-colors">1</span>
+                  <h4 className="text-xs sm:text-sm font-bold text-gov-navy flex items-center gap-1.5">
+                    <FileSpreadsheet className="w-4.5 h-4.5 text-emerald-600" />
+                    การอัปโหลดใบเสนอราคา (Excel)
+                  </h4>
+                  <p className="text-xs text-neutral-slate leading-relaxed">
+                    หากคุณต้องการสลับไปตรวจรายการพัสดุสำหรับโครงการอื่นของเทศบาล สามารถจัดเตรียมตาราง Excel (คอลัมน์แรกระบุรหัสพัสดุ ลำดับถัดไปคือสเปกสินค้า จำนวน หน่วยนับ ราคาต่อหน่วย และฝ่ายผู้เบิก) นำมาวางในโมดูล **"นำเข้าสเปกพัสดุ"** ระบบจะทำการแปลงตัวเลข ประมวลผล Checklist และสร้างแดชบอร์ดงบประมาณใหม่ให้ทันทีใน 2 วินาที
+                  </p>
+                </div>
+
+                {/* Section 2: Visual Inspection & 3D Viewer */}
+                <div className="bg-white p-6 rounded-3xl shadow-premium border border-slate-100 space-y-3 hover:border-gov-gold/30 transition-all duration-300 relative group">
+                  <span className="absolute top-4 right-4 w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-gov-gold group-hover:bg-gov-gold-light transition-colors">2</span>
+                  <h4 className="text-xs sm:text-sm font-bold text-gov-navy flex items-center gap-1.5">
+                    <RotateCcw className="w-4.5 h-4.5 text-gov-gold" />
+                    การสำรวจพัสดุและการใช้นิ้วปัดหมุน 3D
+                  </h4>
+                  <p className="text-xs text-neutral-slate leading-relaxed">
+                    ในแท็บตรวจรับรายชิ้น ให้กดปุ่ม **"เปิด"** บนพัสดุรายการที่ต้องการ เพื่อเข้าสู่หน้าต่างปฏิบัติงาน (Inspection Workspace) คณะกรรมการสามารถกวาดนิ้วเพื่อหมุนดูแบบจำลองพัสดุแบบ 360° และคลิกที่มาร์กเกอร์ (Hotspots) เพื่อให้ระบบทำการติ๊ก Checklist ตรรกะส่วนควบอุปกรณ์ที่กำหนดไว้ตามสัญญาให้อัตโนมัติ
+                  </p>
+                </div>
+
+                {/* Section 3: Serial No, MAC and Multi-images */}
+                <div className="bg-white p-6 rounded-3xl shadow-premium border border-slate-100 space-y-3 hover:border-gov-gold/30 transition-all duration-300 relative group">
+                  <span className="absolute top-4 right-4 w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-gov-gold group-hover:bg-gov-gold-light transition-colors">3</span>
+                  <h4 className="text-xs sm:text-sm font-bold text-gov-navy flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4.5 h-4.5 text-status-passed" />
+                    การกรอกประวัติเครื่องและภาพถ่าย 5 ด้าน
+                  </h4>
+                  <p className="text-xs text-neutral-slate leading-relaxed">
+                    สำหรับพัสดุประเภทอิเล็กทรอนิกส์ คณะกรรมการต้องระบุหมายเลข Serial Number และ MAC Address ของอุปกรณ์ พร้อมกดอัปโหลดรูปถ่ายหลักฐานพัสดุจริง แยกตามคุณลักษณะ: **ภาพสินค้าจริง, ป้าย Serial, ป้ายสติกเกอร์ครุภัณฑ์หลวง, กล่องพัสดุ และอุปกรณ์คู่มือ** เพื่อเป็นหลักฐานให้แก่คณะกรรมการตรวจสอบระบบภายนอก
+                  </p>
+                </div>
+
+                {/* Section 4: Share state URL Hash for collaboration */}
+                <div className="bg-white p-6 rounded-3xl shadow-premium border border-slate-100 space-y-3 hover:border-gov-gold/30 transition-all duration-300 relative group">
+                  <span className="absolute top-4 right-4 w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-gov-gold group-hover:bg-gov-gold-light transition-colors">4</span>
+                  <h4 className="text-xs sm:text-sm font-bold text-gov-navy flex items-center gap-1.5">
+                    <Share2 className="w-4.5 h-4.5 text-gov-blue" />
+                    การแชร์ลิงก์และตรวจสอบความโปร่งใส
+                  </h4>
+                  <p className="text-xs text-neutral-slate leading-relaxed">
+                    ระบบพัฒนาขึ้นภายใต้สถาปัตยกรรมไร้ฐานข้อมูลกึ่งกลาง เมื่อกรรมการท่านหนึ่งตรวจรับพัสดุเสร็จแล้ว ให้คลิกปุ่ม **"แชร์ผลตรวจ"** ที่แถบเมนูด้านซ้ายล่าง ลิงก์ที่คัดลอกจะเข้ารหัสความก้าวหน้าไว้ใน URL เมื่อส่งต่อให้กรรมการท่านอื่นเปิดลิงก์ บราวเซอร์ปลายทางจะอัปเดตสถานะและข้อมูลรูปภาพทั้งหมดตรงกันทันที ทำให้อุปกรณ์อื่นๆ สามารถทำการค้นหาตัวกรอง ค้นสเปก และดาวน์โหลดรายงานต่อได้โดยตรง
+                  </p>
+                </div>
+
+              </div>
+
+              {/* Regulatory warning banner */}
+              <div className="p-5 bg-amber-50 border border-amber-200/60 rounded-2xl flex gap-3 text-xs leading-relaxed text-amber-800">
+                <AlertTriangle className="w-6 h-6 text-status-pending shrink-0" />
+                <div className="space-y-1">
+                  <span className="font-bold text-gov-navy">กฎเกณฑ์การผ่านรับมอบสัญญาระเบียบจัดซื้อภาครัฐ:</span>
+                  <p>
+                    ปุ่มเปลี่ยนความเห็นตรวจพัสดุผ่านสุดท้าย (Passed) จะถูกปิดกั้นการกดยืนยันหากคณะกรรมการยังตรวจและทำเครื่องหมาย Checklist ย่อยไม่ครบทั้ง 8 ข้อ การตรวจผ่านต้องเป็นความเห็นชอบเอกฉันท์ร่วมกันของคณะกรรมการตามคำสั่งที่ได้รับมอบหมาย
+                  </p>
+                </div>
+              </div>
+
+            </div>
           )}
 
         </div>
