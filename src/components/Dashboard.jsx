@@ -132,7 +132,7 @@ function Ecosystem3DViewer() {
 }
 
 // Custom SVG Donut Chart component with interactive legends
-function SvgDonutChart({ data }) {
+function SvgDonutChart({ data, onSelect }) {
   const total = data.reduce((acc, curr) => acc + curr.value, 0) || 1;
   let accumulatedAngle = 0;
 
@@ -167,8 +167,9 @@ function SvgDonutChart({ data }) {
               strokeDasharray="282.6"
               strokeDashoffset={seg.strokeOffset}
               strokeLinecap="round"
+              onClick={() => onSelect && onSelect(seg.key)}
               className="transition-all duration-500 hover:scale-105 origin-center cursor-pointer"
-              title={`${seg.name}: ${formatNumber(seg.value)} บาท`}
+              title={`${seg.name}: ${formatNumber(seg.value)} บาท (คลิกเพื่อจัดกรอง)`}
             />
           ))}
         </svg>
@@ -180,7 +181,12 @@ function SvgDonutChart({ data }) {
 
       <div className="flex-1 w-full space-y-2 max-h-[160px] overflow-y-auto pr-1">
         {donutSegments.slice(0, 5).map((seg, idx) => (
-          <div key={idx} className="flex items-center justify-between text-xs font-medium">
+          <div 
+            key={idx} 
+            onClick={() => onSelect && onSelect(seg.key)}
+            className="flex items-center justify-between text-xs font-medium cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors"
+            title="คลิกเพื่อคัดกรองข้อมูลรายการตามหมวดหมู่นี้"
+          >
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }}></span>
               <span className="text-neutral-charcoal truncate max-w-[120px]">{seg.name}</span>
@@ -194,7 +200,7 @@ function SvgDonutChart({ data }) {
 }
 
 // Custom Area/Line Trend Chart mapping budget values
-function SvgLineChart({ data }) {
+function SvgLineChart({ data, onSelect }) {
   const maxVal = Math.max(...data.map(d => d.value)) || 1;
   const width = 320;
   const height = 120;
@@ -248,8 +254,9 @@ function SvgLineChart({ data }) {
               fill="#c5a880"
               stroke="white"
               strokeWidth="1.5"
+              onClick={() => onSelect && onSelect(p.label)}
               className="cursor-pointer hover:scale-125 transition-transform"
-              title={`${p.label}: ${formatNumber(p.value)} บาท`}
+              title={`${p.label}: ${formatNumber(p.value)} บาท (คลิกเพื่อจัดกรอง)`}
             />
           ))}
         </svg>
@@ -257,8 +264,13 @@ function SvgLineChart({ data }) {
 
       <div className="grid grid-cols-4 gap-2 text-center">
         {data.slice(0, 4).map((d, idx) => (
-          <div key={idx} className="space-y-0.5">
-            <span className="text-[9px] text-neutral-slate block truncate">{d.name}</span>
+          <div 
+            key={idx} 
+            onClick={() => onSelect && onSelect(d.name)}
+            className="space-y-0.5 cursor-pointer hover:bg-slate-50 p-1 rounded transition-colors"
+            title="คลิกเพื่อคัดกรองข้อมูลตามฝ่ายงานนี้"
+          >
+            <span className="text-[9px] text-neutral-slate block truncate font-bold">{d.name}</span>
             <span className="text-[10px] font-black text-gov-blue num-tabular">{(d.value / 1000).toFixed(0)}k</span>
           </div>
         ))}
@@ -269,7 +281,6 @@ function SvgLineChart({ data }) {
 
 // Half-Circle Gauge indicating Risk Level
 function RiskGauge({ failedCount, duplicateCount, pendingCount }) {
-  // Simple risk heuristic score
   const riskScore = (failedCount * 30) + (duplicateCount * 25) + (pendingCount > 10 ? 20 : 5);
   const scoreClamped = Math.min(riskScore, 100);
 
@@ -290,7 +301,6 @@ function RiskGauge({ failedCount, duplicateCount, pendingCount }) {
     riskBorder = 'border-amber-200';
   }
 
-  // Circular arc calculation (strokeDashoffset of half circle circumference 141.3)
   const strokeOffset = 141.3 - (scoreClamped / 100) * 141.3;
 
   return (
@@ -333,7 +343,9 @@ export default function Dashboard({
   handleEditCommitteeChange, 
   handleSaveCommittee,
   items,
-  onItemClick
+  onItemClick,
+  onCategorySelect,
+  onDivisionSelect
 }) {
   // Recalculate stats dynamically based on the filtered items passed to represent PowerBI-style instant updates
   const dashboardStats = useMemo(() => {
@@ -385,6 +397,7 @@ export default function Dashboard({
     };
     
     const categoryData = Object.entries(catMap).map(([key, value]) => ({
+      key,
       name: catLabels[key] || key,
       value
     }));
@@ -557,18 +570,18 @@ export default function Dashboard({
         <div className="bg-white p-6 rounded-2xl shadow-premium border border-slate-100 space-y-5">
           <h4 className="text-[10px] font-bold text-neutral-slate uppercase tracking-wider flex items-center gap-1.5">
             <Activity className="w-3.5 h-3.5 text-gov-gold" />
-            การกระจายงบประมาณตามหมวดพัสดุ
+            การกระจายงบประมาณตามหมวดพัสดุ (คลิกเพื่อเจาะลึกข้อมูล)
           </h4>
-          <SvgDonutChart data={dashboardStats.categoryData} />
+          <SvgDonutChart data={dashboardStats.categoryData} onSelect={onCategorySelect} />
         </div>
 
         {/* Division Progress Line Chart */}
         <div className="bg-white p-6 rounded-2xl shadow-premium border border-slate-100 space-y-5">
           <h4 className="text-[10px] font-bold text-neutral-slate uppercase tracking-wider flex items-center gap-1.5">
             <TrendingUp className="w-3.5 h-3.5 text-gov-blue" />
-            งบประมาณจัดซื้อแยกตามกลุ่มงาน
+            งบประมาณจัดซื้อแยกตามกลุ่มงาน (คลิกเพื่อเจาะลึกข้อมูล)
           </h4>
-          <SvgLineChart data={dashboardStats.divisionData} />
+          <SvgLineChart data={dashboardStats.divisionData} onSelect={onDivisionSelect} />
         </div>
 
         {/* Risk Index Gauge */}
@@ -580,7 +593,7 @@ export default function Dashboard({
 
       </div>
 
-      {/* Insight Engine Panel (Automated Text Analytics) */}
+      {/* Insight Engine Panel */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
         
         {/* Left Side: Insight list */}
@@ -647,7 +660,6 @@ export default function Dashboard({
                     </span>
                     <button
                       onClick={() => {
-                        // Find item and click
                         const itemObj = items.find(i => i.id === rec.targetId);
                         if (itemObj) onItemClick(itemObj);
                       }}

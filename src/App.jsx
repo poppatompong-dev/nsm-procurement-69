@@ -573,6 +573,16 @@ export default function App() {
               handleSaveCommittee={handleSaveCommittee}
               items={filteredItems}
               onItemClick={(item) => setSelectedItem(item)}
+              onCategorySelect={(cat) => {
+                setCategoryFilter(cat);
+                setActiveTab('items');
+                showToast(`🔌 คัดกรองรายการแสดงเฉพาะหมวดพัสดุเรียบร้อย`);
+              }}
+              onDivisionSelect={(div) => {
+                setDivisionFilter(div);
+                setActiveTab('items');
+                showToast(`📂 คัดกรองรายการแสดงเฉพาะกลุ่มงาน${div}เรียบร้อย`);
+              }}
             />
           )}
 
