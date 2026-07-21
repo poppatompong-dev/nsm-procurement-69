@@ -95,6 +95,24 @@ body {
   background-size: 24px 24px;
 }
 
+/* Subtle official mesh grid */
+.bg-grid-mesh {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(11, 19, 43, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(11, 19, 43, 0.02) 1px, transparent 1px);
+}
+
+/* Translucent Vimana watermark for government authenticity */
+.bg-watermark-vimana {
+  background-image: url('/logo.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 550px;
+  opacity: 0.025;
+  pointer-events: none;
+}
+
 /* Print CSS adjustments for clean layout spacing */
 @media print {
   body {

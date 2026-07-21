@@ -27,6 +27,7 @@ import ItemCard from './components/ItemCard';
 import ItemDetailModal from './components/ItemDetailModal';
 import OfficialReport from './components/OfficialReport';
 import ExcelImporter from './components/ExcelImporter';
+import ShareModal from './components/ShareModal';
 
 // Import utilities
 import { parseUrlState, generateShareLink } from './utils/stateCompressor';
@@ -64,8 +65,10 @@ export default function App() {
 
   // Selected item for detail modal
   const [selectedItem, setSelectedItem] = useState(null);
-  const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
+  
+  // Share modal state
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // Initial State Loading & URL State Parsing
   useEffect(() => {
@@ -98,7 +101,29 @@ export default function App() {
       if (parsedState.items) {
         currentItems = parsedState.items;
       }
-      showToast('🟢 โหลดสถานะการตรวจรับล่าสุดผ่านลิงก์แชร์เรียบร้อย');
+      
+      // Restore UI states
+      if (parsedState.activeTab) {
+        setTimeout(() => setActiveTab(parsedState.activeTab), 50);
+      }
+      if (parsedState.viewMode) setViewMode(parsedState.viewMode);
+      if (parsedState.sortBy) setSortBy(parsedState.sortBy);
+      if (parsedState.searchQuery) setSearchQuery(parsedState.searchQuery);
+      if (parsedState.categoryFilter) setCategoryFilter(parsedState.categoryFilter);
+      if (parsedState.divisionFilter) setDivisionFilter(parsedState.divisionFilter);
+      if (parsedState.statusFilter) setStatusFilter(parsedState.statusFilter);
+      if (parsedState.hasNotesFilter) setHasNotesFilter(parsedState.hasNotesFilter);
+      if (parsedState.hasImageFilter) setHasImageFilter(parsedState.hasImageFilter);
+      if (parsedState.minPrice) setMinPrice(parsedState.minPrice);
+      if (parsedState.maxPrice) setMaxPrice(parsedState.maxPrice);
+      
+      if (parsedState.selectedItemId) {
+        const found = currentItems.find(i => i.id === parsedState.selectedItemId);
+        if (found) {
+          setTimeout(() => setSelectedItem(found), 100);
+        }
+      }
+      showToast('🟢 โหลดผลการตรวจและตัวกรองล่าสุดเรียบร้อย');
     }
 
     setCommittee(currentCommittee);
@@ -241,7 +266,6 @@ export default function App() {
       return true;
     });
 
-    // Apply Sorting logic to filtered items copy
     const sorted = [...res];
     if (sortBy === 'id-asc') {
       sorted.sort((a, b) => a.id - b.id);
@@ -288,14 +312,26 @@ export default function App() {
 
   const handleShareLink = () => {
     try {
-      const link = generateShareLink(committee, items);
-      navigator.clipboard.writeText(link);
-      setShareLinkCopied(true);
-      showToast('🔗 คัดลอกลิงก์แชร์ความก้าวหน้าล่าสุดแล้ว!');
-      setTimeout(() => setShareLinkCopied(false), 2000);
+      const uiState = {
+        activeTab,
+        viewMode,
+        sortBy,
+        searchQuery,
+        categoryFilter,
+        divisionFilter,
+        statusFilter,
+        hasNotesFilter,
+        hasImageFilter,
+        minPrice,
+        maxPrice,
+        selectedItemId: selectedItem ? selectedItem.id : null
+      };
+      const link = generateShareLink(committee, items, uiState);
+      return link;
     } catch (e) {
       console.error(e);
       showToast('❌ ไม่สามารถสร้างลิงก์แชร์ได้');
+      return '';
     }
   };
 
@@ -475,16 +511,12 @@ export default function App() {
           
           <div className="flex gap-2">
             <button
-              onClick={handleShareLink}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[10px] font-bold transition-all border cursor-pointer ${
-                shareLinkCopied 
-                  ? 'bg-emerald-700 border-emerald-700 text-white' 
-                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
-              }`}
-              title="คัดลอกลิงก์สถานะล่าสุดส่งต่อให้กรรมการท่านอื่นเปิดสืบค้นหรือพิมพ์เอกสารได้ทันที"
+              onClick={() => setIsShareModalOpen(true)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[10px] font-bold transition-all border cursor-pointer bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700"
+              title="เปิดช่องทางแชร์สถานะ คัดลอกคิวอาร์โค้ด และสั่งพิมพ์รายงานสรุป"
             >
               <Share2 className="w-3 h-3 text-gov-gold" />
-              แชร์ผลตรวจ
+              แชร์โครงการ
             </button>
             <button
               onClick={handleResetDatabase}
@@ -527,7 +559,7 @@ export default function App() {
         </header>
 
         {/* Dynamic Page Container */}
-        <div className="flex-1 p-6 overflow-y-auto print:p-0 print:overflow-visible bg-dots/25">
+        <div className="flex-1 p-6 overflow-y-auto print:p-0 print:overflow-visible bg-dots/25 relative">
           
           {/* Tab 1: Dashboard Panel */}
           {activeTab === 'dashboard' && (
@@ -539,7 +571,7 @@ export default function App() {
               handleEditCommitteeStart={handleEditCommitteeStart}
               handleEditCommitteeChange={handleEditCommitteeChange}
               handleSaveCommittee={handleSaveCommittee}
-              items={items}
+              items={filteredItems}
               onItemClick={(item) => setSelectedItem(item)}
             />
           )}
@@ -591,7 +623,7 @@ export default function App() {
                 <>
                   {/* GRID VIEW */}
                   {viewMode === 'grid' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-slide-up">
                       {filteredItems.map(item => (
                         <ItemCard 
                           key={item.id} 
@@ -604,7 +636,7 @@ export default function App() {
 
                   {/* LIST VIEW (Compact Stack Cards) */}
                   {viewMode === 'list' && (
-                    <div className="space-y-4">
+                    <div className="space-y-4 animate-slide-up">
                       {filteredItems.map(item => (
                         <div 
                           key={item.id}
@@ -640,7 +672,7 @@ export default function App() {
 
                   {/* TABLE VIEW (Dense Data Grid Layout) */}
                   {viewMode === 'table' && (
-                    <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-premium">
+                    <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-premium animate-slide-up">
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs text-left border-collapse">
                           <thead>
@@ -841,7 +873,18 @@ export default function App() {
         />
       )}
 
-      {/* 4. Global Toast Alert */}
+      {/* 4. Share Options Overlay */}
+      {isShareModalOpen && (
+        <ShareModal 
+          onClose={() => setIsShareModalOpen(false)}
+          shareUrl={handleShareLink()}
+          onExportExcel={handleExportExcel}
+          onExportJSON={handleExportJSON}
+          onPrint={handlePrint}
+        />
+      )}
+
+      {/* 5. Global Toast Alert */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 bg-gov-navy text-slate-100 px-5 py-3 rounded-2xl shadow-floating z-50 text-xs sm:text-sm font-bold border border-slate-800 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <span className="w-2.5 h-2.5 bg-gov-gold rounded-full animate-ping"></span>
