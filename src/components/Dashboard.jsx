@@ -132,11 +132,27 @@ export default function Dashboard({
   editedCommittee, 
   handleEditCommitteeStart, 
   handleEditCommitteeChange, 
-  handleSaveCommittee
+  handleSaveCommittee,
+  items,
+  onItemClick
 }) {
   const progressPct = stats.totalItems > 0 
     ? Math.round((stats.passedCount / stats.totalItems) * 100) 
     : 0;
+
+  // Filter top 6 items with highest values or pending statuses for quick triage
+  const priorityItems = items
+    .slice()
+    .sort((a, b) => {
+      // Prioritize failed, then pending, then passed
+      const statusWeight = { failed: 0, pending: 1, passed: 2 };
+      if (statusWeight[a.inspectStatus] !== statusWeight[b.inspectStatus]) {
+        return statusWeight[a.inspectStatus] - statusWeight[b.inspectStatus];
+      }
+      // Then prioritize highest cost
+      return (b.qty * b.unit_price) - (a.qty * a.unit_price);
+    })
+    .slice(0, 6);
 
   return (
     <div className="space-y-8 print:hidden animate-fade-in">
@@ -275,7 +291,53 @@ export default function Dashboard({
         </div>
       </div>
 
-      {/* 3. Charts & Distributions */}
+      {/* 3. Priority Work Queue (Interactive List with Detail Modal clicks) */}
+      <div className="bg-white p-6 rounded-2xl shadow-premium border border-slate-100 space-y-4">
+        <div className="border-b border-slate-100 pb-3">
+          <h3 className="text-xs sm:text-sm font-bold text-gov-navy flex items-center gap-2">
+            <span className="w-1.5 h-4 bg-gov-gold rounded-full"></span>
+            คิวงานตรวจสอบด่วน (คลิกรายการพัสดุเพื่อเปิดหน้าต่างตรวจสอบทันที)
+          </h3>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-100 text-neutral-slate font-bold">
+                <th className="py-2.5 w-12 text-center">ID</th>
+                <th className="py-2.5 text-left pl-2">รายการพัสดุคอมพิวเตอร์</th>
+                <th className="py-2.5 w-24 text-center">กลุ่มงาน</th>
+                <th className="py-2.5 w-32 text-right pr-2">งบประมาณจัดซื้อ</th>
+                <th className="py-2.5 w-28 text-center">สถานะ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {priorityItems.map(item => (
+                <tr 
+                  key={item.id}
+                  onClick={() => onItemClick(item)}
+                  className="border-b border-slate-50 hover:bg-slate-50/70 transition-all cursor-pointer font-medium"
+                >
+                  <td className="py-3 font-bold text-center text-gov-gold num-tabular">#{item.id}</td>
+                  <td className="py-3 text-gov-navy font-bold pl-2 truncate max-w-[280px]" title={item.name}>{item.name}</td>
+                  <td className="py-3 text-center text-neutral-slate">กลุ่มงาน{item.division}</td>
+                  <td className="py-3 text-right font-black text-gov-blue pr-2 num-tabular">{formatNumber(item.qty * item.unit_price)} บาท</td>
+                  <td className="py-3 text-center">
+                    <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded border ${
+                      item.inspectStatus === 'passed' ? 'bg-emerald-50 text-status-passed border-emerald-200/50' :
+                      item.inspectStatus === 'failed' ? 'bg-rose-50 text-status-failed border-rose-200/50' : 'bg-amber-50 text-status-pending border-amber-200/50'
+                    }`}>
+                      {item.inspectStatus === 'passed' ? '🟢 ผ่านตรวจ' : item.inspectStatus === 'failed' ? '🔴 ไม่ผ่าน' : '🟡 รอตรวจ'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 4. Charts & Distributions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Division Breakdown */}
@@ -349,7 +411,7 @@ export default function Dashboard({
 
       </div>
 
-      {/* 4. Committee Section */}
+      {/* 5. Committee Section */}
       <div className="bg-white p-6 rounded-2xl shadow-premium border border-slate-100 space-y-6">
         <div className="flex justify-between items-center border-b border-slate-100 pb-4">
           <div className="space-y-0.5">
@@ -419,7 +481,7 @@ export default function Dashboard({
         </div>
       </div>
 
-      {/* 5. Info Section */}
+      {/* 6. Info Section */}
       <div className="bg-white p-6 rounded-2xl shadow-premium border border-slate-100 space-y-4">
         <h3 className="text-xs sm:text-sm font-bold text-gov-navy flex items-center gap-2 border-b border-slate-100 pb-3">
           <Info className="w-4.5 h-4.5 text-gov-gold" />

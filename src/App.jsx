@@ -6,7 +6,8 @@ import {
   UploadCloud, 
   Share2, 
   RotateCcw,
-  ShieldCheck
+  ShieldCheck,
+  ArrowRight
 } from 'lucide-react';
 
 // Import initial dataset
@@ -49,6 +50,10 @@ export default function App() {
   const [hasImageFilter, setHasImageFilter] = useState('all');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  
+  // Sorting & View Modes
+  const [sortBy, setSortBy] = useState('id-asc');
+  const [viewMode, setViewMode] = useState('grid');
 
   // Selected item for detail modal
   const [selectedItem, setSelectedItem] = useState(null);
@@ -183,9 +188,9 @@ export default function App() {
   const categories = useMemo(() => ['connectivity', 'storage', 'peripherals', 'electronics', 'tools', 'organization', 'toner', 'consumables'], []);
   const divisions = useMemo(() => ['บริหาร', 'วิเคราะห์', 'ประชาสัมพันธ์', 'สถิติ'], []);
 
-  // Filtering & Instant Search Logic
+  // Filtering, Instant Search & Sorting Logic
   const filteredItems = useMemo(() => {
-    return items.filter(item => {
+    const res = items.filter(item => {
       if (searchQuery.trim() !== '') {
         const query = searchQuery.toLowerCase();
         const matchesName = (item.name || '').toLowerCase().includes(query);
@@ -228,7 +233,23 @@ export default function App() {
 
       return true;
     });
-  }, [items, searchQuery, categoryFilter, divisionFilter, statusFilter, hasNotesFilter, hasImageFilter, minPrice, maxPrice]);
+
+    // Apply Sorting logic to filtered items copy
+    const sorted = [...res];
+    if (sortBy === 'id-asc') {
+      sorted.sort((a, b) => a.id - b.id);
+    } else if (sortBy === 'id-desc') {
+      sorted.sort((a, b) => b.id - a.id);
+    } else if (sortBy === 'price-desc') {
+      sorted.sort((a, b) => (b.qty * b.unit_price) - (a.qty * a.unit_price));
+    } else if (sortBy === 'price-asc') {
+      sorted.sort((a, b) => (a.qty * a.unit_price) - (b.qty * b.unit_price));
+    } else if (sortBy === 'name-asc') {
+      sorted.sort((a, b) => a.name.localeCompare(b.name, 'th'));
+    }
+
+    return sorted;
+  }, [items, searchQuery, categoryFilter, divisionFilter, statusFilter, hasNotesFilter, hasImageFilter, minPrice, maxPrice, sortBy]);
 
   const handleEditCommitteeStart = () => {
     setEditedCommittee([...committee]);
@@ -375,7 +396,7 @@ export default function App() {
         <nav className="flex-1 p-4 space-y-1 pt-6">
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               activeTab === 'dashboard' 
                 ? 'bg-gov-gold text-gov-navy shadow-sm' 
                 : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
@@ -387,7 +408,7 @@ export default function App() {
           
           <button
             onClick={() => setActiveTab('items')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               activeTab === 'items' 
                 ? 'bg-gov-gold text-gov-navy shadow-sm' 
                 : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
@@ -399,7 +420,7 @@ export default function App() {
 
           <button
             onClick={() => setActiveTab('report')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               activeTab === 'report' 
                 ? 'bg-gov-gold text-gov-navy shadow-sm' 
                 : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
@@ -411,7 +432,7 @@ export default function App() {
 
           <button
             onClick={() => setActiveTab('importer')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               activeTab === 'importer' 
                 ? 'bg-gov-gold text-gov-navy shadow-sm' 
                 : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
@@ -431,7 +452,7 @@ export default function App() {
           <div className="flex gap-2">
             <button
               onClick={handleShareLink}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[10px] font-bold transition-all border ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[10px] font-bold transition-all border cursor-pointer ${
                 shareLinkCopied 
                   ? 'bg-emerald-700 border-emerald-700 text-white' 
                   : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
@@ -442,7 +463,7 @@ export default function App() {
             </button>
             <button
               onClick={handleResetDatabase}
-              className="px-3 py-2.5 bg-slate-800 border border-slate-700 hover:bg-rose-950 hover:border-rose-900 text-slate-300 hover:text-rose-100 rounded-xl text-[10px] font-bold transition-colors"
+              className="px-3 py-2.5 bg-slate-800 border border-slate-700 hover:bg-rose-950 hover:border-rose-900 text-slate-300 hover:text-rose-100 rounded-xl text-[10px] font-bold transition-colors cursor-pointer"
               title="รีเซ็ตฐานข้อมูล"
             >
               <RotateCcw className="w-3 h-3" />
@@ -480,7 +501,7 @@ export default function App() {
         </header>
 
         {/* Dynamic Page Container */}
-        <div className="flex-1 p-6 overflow-y-auto print:p-0 print:overflow-visible">
+        <div className="flex-1 p-6 overflow-y-auto print:p-0 print:overflow-visible bg-dots/25">
           
           {/* Tab 1: Dashboard Panel */}
           {activeTab === 'dashboard' && (
@@ -492,6 +513,8 @@ export default function App() {
               handleEditCommitteeStart={handleEditCommitteeStart}
               handleEditCommitteeChange={handleEditCommitteeChange}
               handleSaveCommittee={handleSaveCommittee}
+              items={items}
+              onItemClick={(item) => setSelectedItem(item)}
             />
           )}
 
@@ -526,22 +549,122 @@ export default function App() {
                   setHasImageFilter('all');
                   setMinPrice('');
                   setMaxPrice('');
+                  setSortBy('id-asc');
+                  setViewMode('grid');
                 }}
                 categories={categories}
                 divisions={divisions}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+                viewMode={viewMode}
+                setViewMode={setViewMode}
               />
 
-              {/* Items Card Grid */}
+              {/* Items Rendered by chosen ViewMode */}
               {filteredItems.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredItems.map(item => (
-                    <ItemCard 
-                      key={item.id} 
-                      item={item} 
-                      onClick={() => setSelectedItem(item)} 
-                    />
-                  ))}
-                </div>
+                <>
+                  {/* GRID VIEW */}
+                  {viewMode === 'grid' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {filteredItems.map(item => (
+                        <ItemCard 
+                          key={item.id} 
+                          item={item} 
+                          onClick={() => setSelectedItem(item)} 
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* LIST VIEW (Compact Stack Cards) */}
+                  {viewMode === 'list' && (
+                    <div className="space-y-4">
+                      {filteredItems.map(item => (
+                        <div 
+                          key={item.id}
+                          onClick={() => setSelectedItem(item)}
+                          className="bg-white p-4.5 rounded-2xl shadow-premium border border-slate-100 hover:border-gov-gold/30 hover:shadow-floating hover:-translate-y-0.5 transition-all duration-300 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="bg-gov-gold-light text-gov-gold font-bold text-[10px] px-2 py-0.5 rounded border border-gov-gold/15 shrink-0 num-tabular">
+                              ID {item.id}
+                            </span>
+                            <div>
+                              <h4 className="text-xs sm:text-sm font-bold text-gov-navy line-clamp-1">{item.name}</h4>
+                              <p className="text-[10px] text-neutral-slate mt-0.5">กลุ่มงาน{item.division} | {item.qty} {item.unit}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between sm:justify-end gap-6 border-t sm:border-t-0 border-slate-50 pt-2.5 sm:pt-0 shrink-0">
+                            <div className="text-right">
+                              <span className="text-[9px] text-neutral-slate font-bold block uppercase tracking-wider">มูลค่าจัดซื้อ</span>
+                              <span className="text-xs sm:text-sm font-black text-gov-navy num-tabular">{formatNumber(item.qty * item.unit_price)} บาท</span>
+                            </div>
+                            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border shrink-0 ${
+                              item.inspectStatus === 'passed' ? 'bg-emerald-50 text-status-passed border-emerald-200/50' :
+                              item.inspectStatus === 'failed' ? 'bg-rose-50 text-status-failed border-rose-200/50' : 'bg-amber-50 text-status-pending border-amber-200/50'
+                            }`}>
+                              {item.inspectStatus === 'passed' ? '🟢 ตรวจผ่าน' : item.inspectStatus === 'failed' ? '🔴 ไม่ผ่าน' : '🟡 รอตรวจ'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* TABLE VIEW (Dense Data Grid Layout) */}
+                  {viewMode === 'table' && (
+                    <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-premium">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs text-left border-collapse">
+                          <thead>
+                            <tr className="bg-slate-900 text-white font-bold">
+                              <th className="p-3 w-14 text-center">ID</th>
+                              <th className="p-3 pl-2">รายการพัสดุคุณลักษณะเฉพาะ</th>
+                              <th className="p-3 w-28 text-center">กลุ่มงาน</th>
+                              <th className="p-3 w-16 text-center">จำนวน</th>
+                              <th className="p-3 w-24 text-right">ราคา/หน่วย</th>
+                              <th className="p-3 w-28 text-right">งบประมาณจัดซื้อ</th>
+                              <th className="p-3 w-28 text-center">สถานะ</th>
+                              <th className="p-3 w-16 text-center">ตรวจ</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredItems.map(item => (
+                              <tr 
+                                key={item.id} 
+                                className="border-b border-slate-100 hover:bg-slate-50 transition-colors font-medium"
+                              >
+                                <td className="p-3 font-bold text-center text-gov-gold num-tabular">#{item.id}</td>
+                                <td className="p-3 text-gov-navy font-bold pl-2 truncate max-w-[320px]" title={item.name}>{item.name}</td>
+                                <td className="p-3 text-center text-neutral-slate">กลุ่มงาน{item.division}</td>
+                                <td className="p-3 text-center num-tabular">{item.qty} {item.unit}</td>
+                                <td className="p-3 text-right num-tabular">{formatNumber(item.unit_price)}</td>
+                                <td className="p-3 text-right font-black text-gov-blue num-tabular">{formatNumber(item.qty * item.unit_price)}</td>
+                                <td className="p-3 text-center">
+                                  <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded border ${
+                                    item.inspectStatus === 'passed' ? 'bg-emerald-50 text-status-passed border-emerald-200/50' :
+                                    item.inspectStatus === 'failed' ? 'bg-rose-50 text-status-failed border-rose-200/50' : 'bg-amber-50 text-status-pending border-amber-200/50'
+                                  }`}>
+                                    {item.inspectStatus === 'passed' ? 'ผ่านตรวจ' : item.inspectStatus === 'failed' ? 'ไม่ผ่าน' : 'รอตรวจ'}
+                                  </span>
+                                </td>
+                                <td className="p-3 text-center">
+                                  <button 
+                                    onClick={() => setSelectedItem(item)}
+                                    className="px-2.5 py-1 bg-gov-blue hover:bg-gov-navy text-white text-[10px] font-bold rounded-lg transition-colors cursor-pointer"
+                                  >
+                                    เปิด
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="bg-white rounded-2xl p-16 text-center border border-slate-100 space-y-2 shadow-premium">
                   <div className="text-neutral-slate font-semibold text-xs">ไม่พบรายการพัสดุที่สอดคล้องกับการค้นหาของคุณ</div>
@@ -555,6 +678,8 @@ export default function App() {
                       setHasImageFilter('all');
                       setMinPrice('');
                       setMaxPrice('');
+                      setSortBy('id-asc');
+                      setViewMode('grid');
                     }}
                     className="text-xs font-bold text-gov-gold hover:underline"
                   >

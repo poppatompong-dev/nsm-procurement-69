@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Filter, RotateCcw } from 'lucide-react';
+import { Search, Filter, RotateCcw, LayoutGrid, List, Table2 } from 'lucide-react';
 
 export default function Filters({ 
   searchQuery, 
@@ -20,7 +20,11 @@ export default function Filters({
   setMaxPrice,
   handleResetFilters,
   categories,
-  divisions
+  divisions,
+  sortBy,
+  setSortBy,
+  viewMode,
+  setViewMode
 }) {
   return (
     <div className="bg-white p-6 rounded-2xl shadow-premium border border-slate-100 space-y-5 print:hidden">
@@ -126,8 +130,10 @@ export default function Filters({
 
       </div>
 
-      {/* Pricing Range Slider & Reset Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between pt-3 border-t border-slate-100">
+      {/* Pricing Range Slider & Sorting & View Mode */}
+      <div className="flex flex-col lg:flex-row gap-4 items-center justify-between pt-4 border-t border-slate-100">
+        
+        {/* Price Slider */}
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <span className="text-[10px] font-bold text-neutral-slate uppercase tracking-wider whitespace-nowrap">ช่วงราคาต่อหน่วย (บาท):</span>
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -149,13 +155,60 @@ export default function Filters({
           </div>
         </div>
 
-        <button 
-          onClick={handleResetFilters}
-          className="w-full sm:w-auto flex items-center justify-center gap-1.5 text-xs text-neutral-slate hover:text-gov-navy font-bold px-4 py-2 rounded-xl bg-slate-50 border border-slate-200/50 hover:bg-slate-100 hover:border-slate-300 transition-all duration-300"
-        >
-          <RotateCcw className="w-3.5 h-3.5 text-gov-gold" />
-          ล้างตัวกรองทั้งหมด
-        </button>
+        {/* Sorting & Views */}
+        <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto justify-end">
+          
+          {/* Sorting Dropdown */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-neutral-slate uppercase tracking-wider">จัดเรียง:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl text-xs font-bold focus:outline-none focus:border-gov-gold focus:bg-white text-neutral-charcoal"
+            >
+              <option value="id-asc">ลำดับ (น้อย ไป มาก)</option>
+              <option value="id-desc">ลำดับ (มาก ไป น้อย)</option>
+              <option value="price-desc">งบจัดซื้อ (สูง ไป ต่ำ)</option>
+              <option value="price-asc">งบจัดซื้อ (ต่ำ ไป สูง)</option>
+              <option value="name-asc">ชื่อพัสดุ (ก - ฮ)</option>
+            </select>
+          </div>
+
+          {/* View Modes Toggle */}
+          <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200/50">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-gov-blue text-white shadow-sm font-bold' : 'text-neutral-slate hover:text-gov-navy'}`}
+              title="มุมมองแบบการ์ด (Grid)"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${viewMode === 'list' ? 'bg-gov-blue text-white shadow-sm font-bold' : 'text-neutral-slate hover:text-gov-navy'}`}
+              title="มุมมองแบบย่อ (List)"
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${viewMode === 'table' ? 'bg-gov-blue text-white shadow-sm font-bold' : 'text-neutral-slate hover:text-gov-navy'}`}
+              title="มุมมองตารางหนาแน่น (Table)"
+            >
+              <Table2 className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Reset Filters */}
+          <button 
+            onClick={handleResetFilters}
+            className="flex items-center justify-center gap-1.5 text-xs text-neutral-slate hover:text-gov-navy font-bold px-3.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200/50 hover:bg-slate-100 hover:border-slate-300 transition-all duration-300"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-gov-gold" />
+            ล้างตัวกรอง
+          </button>
+        </div>
+
       </div>
 
     </div>
