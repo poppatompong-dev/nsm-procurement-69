@@ -6,17 +6,13 @@ import {
   UploadCloud, 
   Share2, 
   RotateCcw,
-  CheckCircle,
-  HelpCircle,
-  ShieldCheck,
-  Building,
-  UserCheck
+  ShieldCheck
 } from 'lucide-react';
 
 // Import initial dataset
 import initialProcurementData from './data/procurementData.json';
 
-// Import newly created components
+// Import components
 import Dashboard from './components/Dashboard';
 import Filters from './components/Filters';
 import ItemCard from './components/ItemCard';
@@ -59,9 +55,8 @@ export default function App() {
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
-  // 1. Initial State Loading & URL State Parsing
+  // Initial State Loading & URL State Parsing
   useEffect(() => {
-    // Load committee from cache or defaults
     const cachedCommittee = localStorage.getItem('procurement_committee_v3');
     let currentCommittee = DEFAULT_COMMITTEE;
     if (cachedCommittee) {
@@ -72,7 +67,6 @@ export default function App() {
       }
     }
 
-    // Load items from cache or defaults
     const cachedItems = localStorage.getItem('procurement_items_v3');
     let currentItems = initialProcurementData;
     if (cachedItems) {
@@ -92,7 +86,7 @@ export default function App() {
       if (parsedState.items) {
         currentItems = parsedState.items;
       }
-      showToast('🟢 โหลดข้อมูลความคืบหน้าการตรวจรับผ่านลิงก์แชร์สำเร็จ!');
+      showToast('🟢 โหลดสถานะการตรวจรับล่าสุดผ่านลิงก์แชร์เรียบร้อย');
     }
 
     setCommittee(currentCommittee);
@@ -100,7 +94,6 @@ export default function App() {
     setItems(currentItems);
   }, []);
 
-  // Show dynamic toast notifications
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => {
@@ -119,7 +112,7 @@ export default function App() {
     localStorage.setItem('procurement_committee_v3', JSON.stringify(committee));
   }, [committee]);
 
-  // 2. Statistics Calculations
+  // Statistics Calculations
   const stats = useMemo(() => {
     const totalItems = items.length;
     const passedCount = items.filter(i => i.inspectStatus === 'passed').length;
@@ -141,7 +134,6 @@ export default function App() {
       }
     });
 
-    // Division breakdown calculation
     const divMap = {};
     items.forEach(i => {
       let div = i.division || 'ทั่วไป';
@@ -151,7 +143,6 @@ export default function App() {
     });
     const divisionData = Object.entries(divMap).map(([name, value]) => ({ name, value }));
 
-    // Category breakdown calculation
     const catMap = {};
     items.forEach(i => {
       const cat = i.category || 'อื่นๆ';
@@ -189,14 +180,12 @@ export default function App() {
     };
   }, [items]);
 
-  // Unique lists for dropdowns
   const categories = useMemo(() => ['connectivity', 'storage', 'peripherals', 'electronics', 'tools', 'organization', 'toner', 'consumables'], []);
   const divisions = useMemo(() => ['บริหาร', 'วิเคราะห์', 'ประชาสัมพันธ์', 'สถิติ'], []);
 
-  // 3. Filtering & Instant Search Logic
+  // Filtering & Instant Search Logic
   const filteredItems = useMemo(() => {
     return items.filter(item => {
-      // 1. Text Search matching
       if (searchQuery.trim() !== '') {
         const query = searchQuery.toLowerCase();
         const matchesName = (item.name || '').toLowerCase().includes(query);
@@ -213,33 +202,27 @@ export default function App() {
         }
       }
 
-      // 2. Category Filter
       if (categoryFilter !== 'all' && item.category !== categoryFilter) {
         return false;
       }
 
-      // 3. Division Filter (Merge PR / ปชส mapping)
       if (divisionFilter !== 'all') {
         let divClean = item.division || '';
         if (divClean === 'ปชส.' || divClean === 'ปชส. 3') divClean = 'ประชาสัมพันธ์';
         if (divClean !== divisionFilter) return false;
       }
 
-      // 4. Status Filter
       if (statusFilter !== 'all' && item.inspectStatus !== statusFilter) {
         return false;
       }
 
-      // 5. Notes Filter
       if (hasNotesFilter === 'yes' && !item.notes) return false;
       if (hasNotesFilter === 'no' && item.notes) return false;
 
-      // 6. Image Filter
       const hasImg = Object.values(item.images || {}).some(img => img !== '');
       if (hasImageFilter === 'yes' && !hasImg) return false;
       if (hasImageFilter === 'no' && hasImg) return false;
 
-      // 7. Price Filter Range
       if (minPrice && item.unit_price < Number(minPrice)) return false;
       if (maxPrice && item.unit_price > Number(maxPrice)) return false;
 
@@ -247,7 +230,6 @@ export default function App() {
     });
   }, [items, searchQuery, categoryFilter, divisionFilter, statusFilter, hasNotesFilter, hasImageFilter, minPrice, maxPrice]);
 
-  // 4. Committee Actions
   const handleEditCommitteeStart = () => {
     setEditedCommittee([...committee]);
     setIsEditingCommittee(true);
@@ -267,23 +249,21 @@ export default function App() {
     showToast('💾 อัปเดตรายชื่อคณะกรรมการผู้ตรวจรับสำเร็จ!');
   };
 
-  // 5. Item Update Save Actions
   const handleSaveItem = (updatedItem) => {
     const updatedItems = items.map(item => {
       if (item.id === updatedItem.id) return updatedItem;
       return item;
     });
     setItems(updatedItems);
-    showToast(`📝 อัปเดตสถานะตรวจรับพัสดุชิ้นที่ ${updatedItem.id} เรียบร้อยแล้ว`);
+    showToast(`📝 บันทึกผลการตรวจรับพัสดุชิ้นที่ ${updatedItem.id} แล้ว`);
   };
 
-  // 6. Sharing URL Link Action
   const handleShareLink = () => {
     try {
       const link = generateShareLink(committee, items);
       navigator.clipboard.writeText(link);
       setShareLinkCopied(true);
-      showToast('🔗 คัดลอกลิงก์แชร์สถานะตรวจรับล่าสุดลงคลิปบอร์ดแล้ว!');
+      showToast('🔗 คัดลอกลิงก์แชร์ความก้าวหน้าล่าสุดแล้ว!');
       setTimeout(() => setShareLinkCopied(false), 2000);
     } catch (e) {
       console.error(e);
@@ -291,10 +271,8 @@ export default function App() {
     }
   };
 
-  // 7. Reset database action
   const handleResetDatabase = () => {
-    if (window.confirm('⚠️ คำเตือน! คุณต้องการรีเซ็ตข้อมูลและประวัติการตรวจรับพัสดุทั้งหมดกลับเป็นค่าเริ่มต้นหรือไม่? (การดำเนินการนี้จะไม่สามารถย้อนกลับได้)')) {
-      // Re-initialize procurement data structure
+    if (window.confirm('⚠️ คำเตือน! คุณต้องการรีเซ็ตข้อมูลและสถานะการตรวจสอบพัสดุทั้งหมดกลับเป็นค่าเริ่มต้นหรือไม่? (ประวัติการแก้ไขจะถูกล้างทิ้ง)')) {
       const freshItems = initialProcurementData.map(item => ({
         ...item,
         images: {
@@ -329,20 +307,18 @@ export default function App() {
       setEditedCommittee(DEFAULT_COMMITTEE);
       localStorage.removeItem('procurement_items_v3');
       localStorage.removeItem('procurement_committee_v3');
-      window.location.hash = ''; // Clear hash link
-      showToast('🔄 รีเซ็ตฐานข้อมูลการตรวจรับพัสดุกลับเป็นค่าเริ่มต้นเรียบร้อยแล้ว');
+      window.location.hash = ''; // Clear hash URL
+      showToast('🔄 รีเซ็ตฐานข้อมูลการตรวจรับกลับเป็นค่าเริ่มต้นเรียบร้อย');
     }
   };
 
-  // 8. Excel Import Callback
   const handleImportExcel = (newItems) => {
     setItems(newItems);
     localStorage.setItem('procurement_items_v3', JSON.stringify(newItems));
-    showToast(`🟢 นำเข้าไฟล์ใบเสนอราคาใหม่จำนวน ${newItems.length} รายการสำเร็จ!`);
+    showToast(`🟢 นำเข้าสเปกพัสดุ ${newItems.length} รายการเรียบร้อย`);
     setActiveTab('items');
   };
 
-  // 9. Document Export actions (JSON, CSV, Excel)
   const handleExportJSON = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(items, null, 2));
     const downloadAnchor = document.createElement('a');
@@ -370,7 +346,6 @@ export default function App() {
   };
 
   const handleExportExcel = () => {
-    // Generate official-looking layout or export via CSV wrapper safely
     handleExportCSV();
   };
 
@@ -379,94 +354,95 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row text-slate-800 antialiased font-sans">
+    <div className="min-h-screen bg-neutral-warm flex flex-col lg:flex-row text-neutral-charcoal antialiased font-sans">
       
       {/* 1. Sidebar Navigation (Left) */}
-      <aside className="w-full lg:w-64 bg-slate-900 text-slate-100 flex flex-col shrink-0 border-r border-slate-800 print:hidden z-30">
+      <aside className="w-full lg:w-64 bg-gov-navy text-slate-100 flex flex-col shrink-0 border-r border-slate-800 print:hidden z-30 relative">
+        <span className="absolute top-0 bottom-0 right-0 w-0.5 bg-gov-gold"></span>
         
         {/* Sidebar Brand header */}
-        <div className="p-5 bg-slate-950 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-black text-sm text-white shadow-md">
-            NSM
+        <div className="p-5 bg-slate-950/40 flex items-center gap-3 border-b border-slate-800/40 relative">
+          <div className="w-8 h-8 rounded-lg bg-gov-gold flex items-center justify-center font-black text-sm text-gov-navy shadow-md">
+            กย.
           </div>
           <div>
-            <h1 className="text-xs font-black tracking-wider uppercase">เทศบาลนครนครสวรรค์</h1>
-            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">กองยุทธศาสตร์และงบประมาณ</p>
+            <h1 className="text-xs font-bold tracking-wider uppercase text-slate-100">เทศบาลนครนครสวรรค์</h1>
+            <p className="text-[9px] text-gov-gold font-bold uppercase tracking-widest mt-0.5">ระบบดิจิทัลตรวจรับพัสดุ</p>
           </div>
         </div>
 
-        {/* Sidebar Tab buttons */}
-        <nav className="flex-1 p-4 space-y-1">
+        {/* Sidebar Navigation Options */}
+        <nav className="flex-1 p-4 space-y-1 pt-6">
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 ${
               activeTab === 'dashboard' 
-                ? 'bg-blue-700 text-white shadow-sm' 
-                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                ? 'bg-gov-gold text-gov-navy shadow-sm' 
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
             }`}
           >
             <LayoutDashboard className="w-4 h-4 shrink-0" />
-            แผงควบคุมหลัก
+            แผงควบคุมสรุปผล
           </button>
           
           <button
             onClick={() => setActiveTab('items')}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 ${
               activeTab === 'items' 
-                ? 'bg-blue-700 text-white shadow-sm' 
-                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                ? 'bg-gov-gold text-gov-navy shadow-sm' 
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
             }`}
           >
             <PackageCheck className="w-4 h-4 shrink-0" />
-            ตรวจทานรูปพัสดุ
+            ตรวจรับพัสดุรายชิ้น
           </button>
 
           <button
             onClick={() => setActiveTab('report')}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 ${
               activeTab === 'report' 
-                ? 'bg-blue-700 text-white shadow-sm' 
-                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                ? 'bg-gov-gold text-gov-navy shadow-sm' 
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
             }`}
           >
             <FileText className="w-4 h-4 shrink-0" />
-            ระบบออกรายงาน
+            ระบบเอกสารพิมพ์งาน
           </button>
 
           <button
             onClick={() => setActiveTab('importer')}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 ${
               activeTab === 'importer' 
-                ? 'bg-blue-700 text-white shadow-sm' 
-                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                ? 'bg-gov-gold text-gov-navy shadow-sm' 
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
             }`}
           >
             <UploadCloud className="w-4 h-4 shrink-0" />
-            นำเข้ารายการพัสดุ
+            นำเข้าสเปกพัสดุ
           </button>
         </nav>
 
-        {/* Sidebar Footer tools */}
-        <div className="p-4 bg-slate-950/80 border-t border-slate-800/60 space-y-2">
-          <div className="text-[10px] text-slate-400 leading-relaxed font-medium">
-            คีย์ตรวจพัสดุคอมพิวเตอร์ 49 รายการคำสั่งที่ ๘๖๔/๒๕๖๙
+        {/* Sidebar Footer options */}
+        <div className="p-4 bg-slate-950/20 border-t border-slate-800/40 space-y-3">
+          <div className="text-[9px] text-slate-400 leading-relaxed font-bold">
+            ระบบตรวจสอบสัญญางานจัดซื้อ 2569 คำสั่งเทศบาลที่ ๘๖๔/๒๕๖๙
           </div>
           
           <div className="flex gap-2">
             <button
               onClick={handleShareLink}
-              className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[10px] font-bold transition-all border ${
                 shareLinkCopied 
-                  ? 'bg-emerald-600 border-emerald-600 text-white' 
+                  ? 'bg-emerald-700 border-emerald-700 text-white' 
                   : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
               }`}
             >
-              <Share2 className="w-3 h-3" />
-              แชร์สถานะ
+              <Share2 className="w-3 h-3 text-gov-gold" />
+              แชร์ผลตรวจ
             </button>
             <button
               onClick={handleResetDatabase}
-              className="px-2.5 py-1.5 bg-slate-800 border border-slate-700 hover:bg-rose-900/40 hover:border-rose-800 text-slate-300 hover:text-rose-200 rounded-lg text-[10px] font-bold transition-colors"
+              className="px-3 py-2.5 bg-slate-800 border border-slate-700 hover:bg-rose-950 hover:border-rose-900 text-slate-300 hover:text-rose-100 rounded-xl text-[10px] font-bold transition-colors"
               title="รีเซ็ตฐานข้อมูล"
             >
               <RotateCcw className="w-3 h-3" />
@@ -479,33 +455,32 @@ export default function App() {
       {/* 2. Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0">
         
-        {/* Header Bar (Hidden on print) */}
+        {/* Header Bar */}
         <header className="bg-white h-16 border-b border-slate-200/60 flex items-center justify-between px-6 shrink-0 print:hidden z-15">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-blue-700" />
-            <h2 className="text-sm sm:text-base font-black text-slate-800">
-              {activeTab === 'dashboard' && 'แดชบอร์ดสรุปผลการจัดซื้อพัสดุ'}
-              {activeTab === 'items' && 'ระบบตรวจรับและจับคู่รูปพัสดุ'}
-              {activeTab === 'report' && 'หน้าจัดทำรายงานตรวจรับพัสดุแบบเป็นทางการ'}
-              {activeTab === 'importer' && 'เครื่องมือนำเข้าใบเสนอราคา (Excel Importer)'}
+            <ShieldCheck className="w-4.5 h-4.5 text-gov-gold" />
+            <h2 className="text-xs sm:text-sm font-black text-gov-navy tracking-wide">
+              {activeTab === 'dashboard' && 'แดชบอร์ดติดตามความก้าวหน้าโครงการ'}
+              {activeTab === 'items' && 'ระบบตรวจทานพัสดุและภาพถ่ายหลักฐาน'}
+              {activeTab === 'report' && 'ระบบออกรายงานและหนังสือส่งมอบอย่างเป็นทางการ'}
+              {activeTab === 'importer' && 'เครื่องมือนำเข้าใบเสนอราคาพลวัต (Excel Importer)'}
             </h2>
           </div>
           
-          {/* Active stats overview indicator */}
-          <div className="hidden md:flex items-center gap-4 text-xs font-bold text-slate-500">
-            <div className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-              ตรวจแล้ว: {stats.passedCount}/{stats.totalItems}
+          <div className="hidden sm:flex items-center gap-4 text-xs font-bold text-neutral-slate">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-status-passed"></span>
+              ผ่านแล้ว: <span className="text-gov-navy num-tabular">{stats.passedCount}/{stats.totalItems}</span>
             </div>
-            <div className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
-              งบรวม: {formatNumber(stats.totalBudget)} บาท
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-gov-gold"></span>
+              งบรวม: <span className="text-gov-navy num-tabular">{formatNumber(stats.totalBudget)} บาท</span>
             </div>
           </div>
         </header>
 
         {/* Dynamic Page Container */}
-        <div className="flex-1 p-5 sm:p-6 overflow-y-auto print:p-0 print:overflow-visible">
+        <div className="flex-1 p-6 overflow-y-auto print:p-0 print:overflow-visible">
           
           {/* Tab 1: Dashboard Panel */}
           {activeTab === 'dashboard' && (
@@ -517,7 +492,6 @@ export default function App() {
               handleEditCommitteeStart={handleEditCommitteeStart}
               handleEditCommitteeChange={handleEditCommitteeChange}
               handleSaveCommittee={handleSaveCommittee}
-              handleResetDatabase={handleResetDatabase}
             />
           )}
 
@@ -557,9 +531,9 @@ export default function App() {
                 divisions={divisions}
               />
 
-              {/* Items Card Grid layout */}
+              {/* Items Card Grid */}
               {filteredItems.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredItems.map(item => (
                     <ItemCard 
                       key={item.id} 
@@ -569,8 +543,8 @@ export default function App() {
                   ))}
                 </div>
               ) : (
-                <div className="bg-white rounded-2xl p-12 text-center border border-slate-100 space-y-2">
-                  <div className="text-slate-300 font-medium">ไม่พบรายการพัสดุที่ตรงกับเงื่อนไขการค้นหาของคุณ</div>
+                <div className="bg-white rounded-2xl p-16 text-center border border-slate-100 space-y-2 shadow-premium">
+                  <div className="text-neutral-slate font-semibold text-xs">ไม่พบรายการพัสดุที่สอดคล้องกับการค้นหาของคุณ</div>
                   <button 
                     onClick={() => {
                       setSearchQuery('');
@@ -582,9 +556,9 @@ export default function App() {
                       setMinPrice('');
                       setMaxPrice('');
                     }}
-                    className="text-xs font-bold text-blue-700 hover:text-blue-800 underline"
+                    className="text-xs font-bold text-gov-gold hover:underline"
                   >
-                    ล้างการตั้งค่าตัวกรองทั้งหมด
+                    ล้างการตั้งค่าตัวกรองและดูรายการพัสดุทั้งหมด
                   </button>
                 </div>
               )}
@@ -592,7 +566,7 @@ export default function App() {
             </div>
           )}
 
-          {/* Tab 3: Official Print PDF / Excel Report Panel */}
+          {/* Tab 3: Official Report Panel */}
           {activeTab === 'report' && (
             <OfficialReport 
               items={filteredItems}
@@ -631,8 +605,8 @@ export default function App() {
 
       {/* 4. Global Toast Alert */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 bg-slate-900 text-slate-100 px-5 py-3 rounded-2xl shadow-xl z-50 text-xs sm:text-sm font-semibold border border-slate-800 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <span className="w-2 h-2 bg-blue-500 rounded-full animate-ping"></span>
+        <div className="fixed bottom-6 right-6 bg-gov-navy text-slate-100 px-5 py-3 rounded-2xl shadow-floating z-50 text-xs sm:text-sm font-bold border border-slate-800 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <span className="w-2.5 h-2.5 bg-gov-gold rounded-full animate-ping"></span>
           {toastMessage}
         </div>
       )}

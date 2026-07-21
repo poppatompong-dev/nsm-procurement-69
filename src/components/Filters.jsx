@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Filter, RotateCcw, HelpCircle } from 'lucide-react';
+import { Search, Filter, RotateCcw } from 'lucide-react';
 
 export default function Filters({ 
   searchQuery, 
@@ -23,37 +23,37 @@ export default function Filters({
   divisions
 }) {
   return (
-    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4 print:hidden">
+    <div className="bg-white p-6 rounded-2xl shadow-premium border border-slate-100 space-y-5 print:hidden">
       
       {/* Search Input */}
       <div className="relative">
-        <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-          <Search className="w-4 h-4" />
+        <span className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+          <Search className="w-4 h-4 text-gov-gold" />
         </span>
         <input 
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="ค้นหาตามชื่อพัสดุ, ยี่ห้อ, รุ่น, Serial Number, เลขครุภัณฑ์, หมวดหมู่, หรือกลุ่มงาน..."
-          className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600 transition-all placeholder-slate-400 text-slate-800"
+          placeholder="ค้นหาวัสดุคอมพิวเตอร์ตามชื่อสเปก, Serial, เลขครุภัณฑ์, หมวดหมู่, หรือฝ่ายเบิก..."
+          className="w-full bg-slate-50 border border-slate-200 pl-11 pr-4 py-3 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-gov-gold/15 focus:border-gov-gold transition-all text-neutral-charcoal placeholder-slate-400"
         />
       </div>
 
-      {/* Advanced Filters */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+      {/* Advanced Filters Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
         
         {/* Category Dropdown */}
-        <div className="space-y-1">
-          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">หมวดหมู่หลัก</label>
+        <div className="space-y-1.5">
+          <label className="block text-[9px] font-bold text-neutral-slate uppercase tracking-wider">หมวดหมู่จัดซื้อ</label>
           <select 
             value={categoryFilter} 
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 transition-colors text-slate-700"
+            className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-gov-gold focus:bg-white transition-all text-neutral-charcoal"
           >
             <option value="all">ทั้งหมด (ทุกหมวด)</option>
             {categories.map((c) => (
               <option key={c} value={c}>
-                {c === 'connectivity' ? '🔌 อุปกรณ์เชื่อมต่อ' :
+                {c === 'connectivity' ? '🔌 เชื่อมต่อ' :
                  c === 'storage' ? '💾 อุปกรณ์จัดเก็บ' :
                  c === 'peripherals' ? '🖱️ อุปกรณ์ต่อพ่วง' :
                  c === 'electronics' ? '🤖 อิเล็กทรอนิกส์' :
@@ -67,12 +67,12 @@ export default function Filters({
         </div>
 
         {/* Division Dropdown */}
-        <div className="space-y-1">
-          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">กลุ่มงานผู้เบิก</label>
+        <div className="space-y-1.5">
+          <label className="block text-[9px] font-bold text-neutral-slate uppercase tracking-wider">กลุ่มงานผู้เบิก</label>
           <select 
             value={divisionFilter} 
             onChange={(e) => setDivisionFilter(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 transition-colors text-slate-700"
+            className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-gov-gold focus:bg-white transition-all text-neutral-charcoal"
           >
             <option value="all">ทั้งหมด (ทุกกลุ่มงาน)</option>
             {divisions.map((d) => (
@@ -82,44 +82,44 @@ export default function Filters({
         </div>
 
         {/* Status Dropdown */}
-        <div className="space-y-1">
-          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">สถานะการตรวจรับ</label>
+        <div className="space-y-1.5">
+          <label className="block text-[9px] font-bold text-neutral-slate uppercase tracking-wider">สถานะการตรวจสอบ</label>
           <select 
             value={statusFilter} 
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 transition-colors text-slate-700"
+            className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-gov-gold focus:bg-white transition-all text-neutral-charcoal"
           >
             <option value="all">ทั้งหมด (ทุกสถานะ)</option>
-            <option value="passed">🟢 ผ่านการตรวจรับ (Passed)</option>
-            <option value="pending">🟡 อยู่ระหว่างตรวจ (Pending)</option>
-            <option value="failed">🔴 ไม่ผ่านเกณฑ์ (Failed)</option>
+            <option value="passed">🟢 ผ่านการตรวจรับ</option>
+            <option value="pending">🟡 รอตรวจสอบ</option>
+            <option value="failed">🔴 ไม่ผ่านเกณฑ์</option>
           </select>
         </div>
 
         {/* Image Attachment Dropdown */}
-        <div className="space-y-1">
-          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">ภาพถ่ายหลักฐาน</label>
+        <div className="space-y-1.5">
+          <label className="block text-[9px] font-bold text-neutral-slate uppercase tracking-wider">เอกสารภาพถ่าย</label>
           <select 
             value={hasImageFilter} 
             onChange={(e) => setHasImageFilter(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 transition-colors text-slate-700"
+            className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-gov-gold focus:bg-white transition-all text-neutral-charcoal"
           >
             <option value="all">ทั้งหมด</option>
-            <option value="yes">📸 มีรูปพัสดุประกอบ</option>
-            <option value="no">❌ ยังไม่มีรูปพัสดุ</option>
+            <option value="yes">📸 มีรูปภาพหลักฐาน</option>
+            <option value="no">❌ ยังไม่มีภาพถ่าย</option>
           </select>
         </div>
 
         {/* Notes Dropdown */}
-        <div className="space-y-1 col-span-2 md:col-span-1">
-          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">หมายเหตุความเห็น</label>
+        <div className="space-y-1.5 col-span-2 lg:col-span-1">
+          <label className="block text-[9px] font-bold text-neutral-slate uppercase tracking-wider">หมายเหตุกรรมการ</label>
           <select 
             value={hasNotesFilter} 
             onChange={(e) => setHasNotesFilter(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-600 transition-colors text-slate-700"
+            className="w-full bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-gov-gold focus:bg-white transition-all text-neutral-charcoal"
           >
             <option value="all">ทั้งหมด</option>
-            <option value="yes">📝 มีบันทึกหมายเหตุ</option>
+            <option value="yes">📝 มีข้อสังเกต</option>
             <option value="no">❌ ไม่มีหมายเหตุ</option>
           </select>
         </div>
@@ -127,33 +127,33 @@ export default function Filters({
       </div>
 
       {/* Pricing Range Slider & Reset Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between pt-1 border-t border-slate-100">
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between pt-3 border-t border-slate-100">
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">ช่วงราคาต่อหน่วย (บาท):</span>
+          <span className="text-[10px] font-bold text-neutral-slate uppercase tracking-wider whitespace-nowrap">ช่วงราคาต่อหน่วย (บาท):</span>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <input 
               type="number"
-              placeholder="Min"
+              placeholder="ราคาต่ำสุด"
               value={minPrice}
               onChange={(e) => setMinPrice(e.target.value)}
-              className="w-20 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg text-xs font-semibold focus:outline-none text-slate-700 focus:border-blue-600"
+              className="w-24 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold focus:outline-none focus:border-gov-gold focus:bg-white text-neutral-charcoal transition-colors num-tabular"
             />
             <span className="text-slate-400 text-xs">-</span>
             <input 
               type="number"
-              placeholder="Max"
+              placeholder="ราคาสูงสุด"
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value)}
-              className="w-24 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg text-xs font-semibold focus:outline-none text-slate-700 focus:border-blue-600"
+              className="w-28 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold focus:outline-none focus:border-gov-gold focus:bg-white text-neutral-charcoal transition-colors num-tabular"
             />
           </div>
         </div>
 
         <button 
           onClick={handleResetFilters}
-          className="w-full sm:w-auto flex items-center justify-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 font-semibold px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100/80 transition-colors"
+          className="w-full sm:w-auto flex items-center justify-center gap-1.5 text-xs text-neutral-slate hover:text-gov-navy font-bold px-4 py-2 rounded-xl bg-slate-50 border border-slate-200/50 hover:bg-slate-100 hover:border-slate-300 transition-all duration-300"
         >
-          <RotateCcw className="w-3.5 h-3.5" />
+          <RotateCcw className="w-3.5 h-3.5 text-gov-gold" />
           ล้างตัวกรองทั้งหมด
         </button>
       </div>

@@ -8,7 +8,7 @@ export default function ExcelImporter({ onImport }) {
 
   const processFile = (file) => {
     if (!file) return;
-    setStatus({ type: 'loading', message: 'กำลังอ่านและประมวลผลไฟล์ Excel...' });
+    setStatus({ type: 'loading', message: 'กำลังประมวลผลไฟล์สเปก Excel...' });
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -16,16 +16,11 @@ export default function ExcelImporter({ onImport }) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
         
-        // Find best sheet (default to 'ร้านค้า' or first sheet)
         const sheetName = workbook.SheetNames.find(n => n.includes('ร้านค้า') || n.includes('ราคา') || n.includes('งบ')) || workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
-        
-        // Convert to array of raw rows
         const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
         
-        // Find header row or items rows
         const parsedItems = [];
-        let startParsing = false;
         
         rawRows.forEach((row) => {
           if (!row || row.length === 0) return;
@@ -33,7 +28,6 @@ export default function ExcelImporter({ onImport }) {
           const firstCell = String(row[0] || '').trim();
           const idNum = Number(firstCell);
           
-          // Row starts with number ID
           if (!isNaN(idNum) && idNum > 0 && row[1]) {
             const name = String(row[1] || '').trim();
             const qty = Number(row[2]) || 1;
@@ -113,12 +107,12 @@ export default function ExcelImporter({ onImport }) {
         } else {
           setStatus({ 
             type: 'error', 
-            message: 'ไม่พบรายการพัสดุในรูปแบบที่ถูกต้องในไฟล์ Excel (แถวต้องเริ่มด้วยรหัส ID ในคอลัมน์แรก)' 
+            message: 'ไม่พบรายการที่ถูกต้องในไฟล์ Excel (คอลัมน์แรกสุดต้องเป็นตัวเลขรหัสพัสดุ)' 
           });
         }
       } catch (err) {
         console.error(err);
-        setStatus({ type: 'error', message: 'เกิดข้อผิดพลาดในการแกะรหัสข้อมูลไฟล์ Excel' });
+        setStatus({ type: 'error', message: 'เกิดข้อผิดพลาดในการแปลข้อมูลไฟล์ Excel' });
       }
     };
     reader.readAsArrayBuffer(file);
@@ -141,35 +135,33 @@ export default function ExcelImporter({ onImport }) {
   };
 
   return (
-    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-4 print:hidden">
-      <div>
-        <h3 className="text-sm sm:text-base font-bold text-slate-800 flex items-center gap-2">
-          <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
-          นำเข้าใบเสนอราคาพัสดุด้วย Excel (Excel Importer)
+    <div className="bg-white p-6 rounded-2xl shadow-premium border border-slate-100 space-y-6 print:hidden animate-fade-in">
+      <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+        <h3 className="text-xs sm:text-sm font-bold text-gov-navy flex items-center gap-2">
+          <FileSpreadsheet className="w-5 h-5 text-gov-gold" />
+          นำเข้าสเปกด้วย Excel (Excel Importer)
         </h3>
-        <p className="text-[10px] sm:text-xs text-slate-400 mt-1">
-          ใช้สำหรับอัปโหลดใบเสนอราคาใหม่เพื่อรีเซ็ตและสร้างฐานข้อมูลการตรวจรับใหม่โดยอัตโนมัติ
-        </p>
+        <span className="text-[10px] font-bold px-2 py-0.5 bg-slate-100 rounded text-neutral-slate">Universal Engine</span>
       </div>
 
-      {/* Drop Zone Area */}
+      {/* Drag Zone Area */}
       <div 
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
+        className={`border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all duration-300 ${
           isDragging 
-            ? 'border-blue-600 bg-blue-50/50' 
-            : 'border-slate-200 bg-slate-50 hover:bg-slate-100/50'
+            ? 'border-gov-gold bg-gov-gold-light/40' 
+            : 'border-slate-200 bg-neutral-warm hover:bg-slate-100/30'
         }`}
       >
-        <label className="cursor-pointer block space-y-2">
-          <Upload className="w-8 h-8 text-slate-400 mx-auto" />
-          <div className="text-xs sm:text-sm font-semibold text-slate-700">
-            ลากและวางไฟล์ Excel หรือคลิกเพื่อค้นหาในเครื่อง
+        <label className="cursor-pointer block space-y-3">
+          <Upload className="w-10 h-10 text-gov-gold mx-auto" />
+          <div className="text-xs sm:text-sm font-bold text-gov-navy">
+            ลากไฟล์สัญญาจัดซื้อ Excel มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์
           </div>
-          <div className="text-[10px] text-slate-400">
-            รองรับไฟล์นามสกุล .xlsx หรือ .xls (โดยคอลัมน์แรกสุดต้องเป็นเลขลำดับ ID เสมอ)
+          <div className="text-[10px] text-neutral-slate leading-relaxed">
+            รองรับไฟล์นามสกุล .xlsx หรือ .xls (โดยตรรกะแรกของตารางแถวต้องขึ้นต้นด้วยรหัสพัสดุเสมอ)
           </div>
           <input 
             type="file" 
@@ -182,18 +174,30 @@ export default function ExcelImporter({ onImport }) {
 
       {/* Status Bar */}
       {status.type !== 'idle' && (
-        <div className={`p-3.5 rounded-xl flex items-center gap-2.5 text-xs font-semibold ${
-          status.type === 'loading' ? 'bg-blue-50 text-blue-700' :
-          status.type === 'success' ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'
+        <div className={`p-4 rounded-xl flex items-center gap-2.5 text-xs font-bold ${
+          status.type === 'loading' ? 'bg-blue-50 text-gov-blue border border-blue-100/30' :
+          status.type === 'success' ? 'bg-emerald-50 text-status-passed border border-emerald-100/30' : 'bg-rose-50 text-status-failed border border-rose-100/30'
         }`}>
           {status.type === 'success' ? (
-            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+            <Check className="w-4 h-4 text-status-passed shrink-0" />
           ) : (
             <AlertCircle className="w-4 h-4 shrink-0" />
           )}
           <span>{status.message}</span>
         </div>
       )}
+
+      {/* Guidelines Card */}
+      <div className="p-4 bg-slate-50 border border-slate-200/50 rounded-2xl text-xs text-neutral-slate space-y-2">
+        <span className="font-bold text-gov-navy block">ข้อกำหนดคอลัมน์ของตาราง Excel:</span>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>คอลัมน์ A (ลำดับ): หมายเลขพัสดุ (ID) เรียงลำดับจาก 1 ขึ้นไป</li>
+          <li>คอลัมน์ B (รายการ): รายละเอียดและสเปกของพัสดุตามสัญญาจัดซื้อ</li>
+          <li>คอลัมน์ C (จำนวน): จำนวนจัดซื้อ (ตัวเลขจำนวนเต็ม)</li>
+          <li>คอลัมน์ D (หน่วย): หน่วยนับพัสดุ (เช่น อัน, ชุด, เส้น, เครื่อง)</li>
+          <li>คอลัมน์ E (ราคาต่อหน่วย): ราคากลางต่อหน่วยอุปกรณ์</li>
+        </ul>
+      </div>
 
     </div>
   );

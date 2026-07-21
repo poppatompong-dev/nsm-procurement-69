@@ -1,8 +1,7 @@
 import React from 'react';
-import { Printer, Download, FileJson, FileSpreadsheet, Eye, QrCode } from 'lucide-react';
+import { Printer, Download, FileJson, FileSpreadsheet, QrCode } from 'lucide-react';
 import { formatNumber } from '../utils/numberFormatter';
 
-// Simplified but elegant Thai Government Garuda Emblem SVG
 const GarudaEmblem = () => (
   <svg 
     xmlns="http://www.w3.org/2000/svg" 
@@ -29,38 +28,37 @@ export default function OfficialReport({
   divisions
 }) {
   
-  // Safe item rendering inside tables
   const renderItemRows = () => {
     return items.map((item, idx) => (
-      <tr key={item.id} className="border-b border-slate-300 print:border-black break-inside-avoid">
-        <td className="px-2.5 py-3 text-center font-bold text-slate-800 print:text-black">{idx + 1}</td>
-        <td className="px-3 py-3 text-left font-bold text-slate-800 print:text-black leading-relaxed">
+      <tr key={item.id} className="border-b border-slate-300 print:border-black print-no-break">
+        <td className="px-2.5 py-3.5 text-center font-bold text-slate-800 print:text-black num-tabular">{idx + 1}</td>
+        <td className="px-3 py-3.5 text-left font-bold text-slate-800 print:text-black leading-relaxed">
           {item.name}
-          <div className="text-[10px] font-normal text-slate-500 print:text-slate-700 mt-1 whitespace-pre-line leading-relaxed">
+          <div className="text-[10px] font-normal text-slate-500 print:text-slate-700 mt-1 whitespace-pre-line leading-relaxed font-medium">
             {item.spec}
           </div>
           {item.serial_number && (
-            <div className="text-[10px] font-bold text-slate-800 print:text-black mt-1">
-              S/N: {item.serial_number} {item.mac_address && `| MAC: ${item.mac_address}`} {item.asset_number && `| เลขครุภัณฑ์: ${item.asset_number}`}
+            <div className="text-[9px] font-bold text-gov-navy print:text-black mt-1 num-tabular">
+              S/N: {item.serial_number} {item.mac_address && `| MAC: ${item.mac_address}`} {item.asset_number && `| รหัสครุภัณฑ์: ${item.asset_number}`}
             </div>
           )}
           {item.notes && (
-            <div className="text-[10px] text-amber-700 print:text-black bg-amber-50 print:bg-transparent px-1.5 py-0.5 mt-1.5 rounded border border-amber-100 print:border-none font-medium">
-              หมายเหตุตรวจรับ: {item.notes}
+            <div className="text-[10px] text-status-pending print:text-black bg-amber-50 print:bg-transparent px-2 py-1 mt-1.5 rounded border border-amber-100/50 print:border-none font-medium">
+              ข้อคิดเห็นการตรวจรับ: {item.notes}
             </div>
           )}
         </td>
-        <td className="px-2.5 py-3 text-center font-semibold text-slate-800 print:text-black">{item.qty}</td>
-        <td className="px-2.5 py-3 text-center font-semibold text-slate-800 print:text-black">{item.unit}</td>
-        <td className="px-2.5 py-3 text-right font-semibold text-slate-800 print:text-black">{formatNumber(item.unit_price)}</td>
-        <td className="px-2.5 py-3 text-right font-black text-slate-900 print:text-black">{formatNumber(item.qty * item.unit_price)}</td>
-        <td className="px-2.5 py-3 text-center font-bold">
+        <td className="px-2.5 py-3.5 text-center font-semibold text-slate-800 print:text-black num-tabular">{item.qty}</td>
+        <td className="px-2.5 py-3.5 text-center font-semibold text-slate-800 print:text-black">{item.unit}</td>
+        <td className="px-2.5 py-3.5 text-right font-semibold text-slate-800 print:text-black num-tabular">{formatNumber(item.unit_price)}</td>
+        <td className="px-2.5 py-3.5 text-right font-black text-gov-navy print:text-black num-tabular">{formatNumber(item.qty * item.unit_price)}</td>
+        <td className="px-2.5 py-3.5 text-center font-bold">
           {item.inspectStatus === 'passed' ? (
-            <span className="text-emerald-700 print:text-black">ผ่าน</span>
+            <span className="text-status-passed print:text-black">ผ่าน</span>
           ) : item.inspectStatus === 'failed' ? (
-            <span className="text-rose-600 print:text-black">ไม่ผ่าน</span>
+            <span className="text-status-failed print:text-black">ไม่ผ่าน</span>
           ) : (
-            <span className="text-amber-600 print:text-black">รอตรวจ</span>
+            <span className="text-status-pending print:text-black">รอตรวจ</span>
           )}
         </td>
       </tr>
@@ -71,15 +69,15 @@ export default function OfficialReport({
     <div className="space-y-6">
       
       {/* 1. Print and Export Controls (Hidden on Print) */}
-      <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-4 items-center justify-between print:hidden">
+      <div className="bg-white p-5 rounded-2xl shadow-premium border border-slate-100 flex flex-col sm:flex-row gap-4 items-center justify-between print:hidden">
         
-        {/* Left Side: Filter quick action */}
+        {/* Left Side: Filters */}
         <div className="flex flex-wrap gap-3 items-center w-full sm:w-auto">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">กรองเพื่อออกรายงาน:</span>
+          <span className="text-xs font-bold text-neutral-slate uppercase tracking-wider">ตัวเลือกออกรายงาน:</span>
           <select 
             value={divisionFilter}
             onChange={(e) => setDivisionFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold focus:outline-none"
+            className="bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl text-xs font-bold focus:outline-none"
           >
             <option value="all">ทุกกลุ่มงาน</option>
             {divisions.map(d => (
@@ -89,28 +87,28 @@ export default function OfficialReport({
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold focus:outline-none"
+            className="bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl text-xs font-bold focus:outline-none"
           >
             <option value="all">ทุกสถานะ</option>
-            <option value="passed">🟢 ตรวจผ่านแล้ว</option>
+            <option value="passed">🟢 ผ่านการตรวจรับ</option>
             <option value="pending">🟡 อยู่ระหว่างตรวจ</option>
             <option value="failed">🔴 ตรวจไม่ผ่าน</option>
           </select>
         </div>
 
-        {/* Right Side: Print and Export Buttons */}
+        {/* Right Side: Actions */}
         <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
           <button 
             onClick={handlePrint}
-            className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-xl shadow-sm transition-colors"
+            className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 bg-gov-blue hover:bg-gov-navy text-white rounded-xl shadow-premium transition-all duration-300 border border-gov-gold/15"
           >
-            <Printer className="w-4 h-4" />
+            <Printer className="w-4 h-4 text-gov-gold" />
             พิมพ์รายงาน (PDF)
           </button>
           
           <button 
             onClick={handleExportExcel}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-800 rounded-xl transition-colors border border-slate-200/60"
+            className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 bg-slate-50 hover:bg-slate-100 text-neutral-charcoal rounded-xl transition-all duration-300 border border-slate-200/50"
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
             Excel
@@ -118,28 +116,31 @@ export default function OfficialReport({
           
           <button 
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-800 rounded-xl transition-colors border border-slate-200/60"
+            className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 bg-slate-50 hover:bg-slate-100 text-neutral-charcoal rounded-xl transition-all duration-300 border border-slate-200/50"
           >
-            <Download className="w-4 h-4 text-blue-600" />
+            <Download className="w-4 h-4 text-gov-blue" />
             CSV
           </button>
 
           <button 
             onClick={handleExportJSON}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-800 rounded-xl transition-colors border border-slate-200/60"
+            className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 bg-slate-50 hover:bg-slate-100 text-neutral-charcoal rounded-xl transition-all duration-300 border border-slate-200/50"
           >
-            <FileJson className="w-4 h-4 text-amber-500" />
+            <FileJson className="w-4 h-4 text-status-pending" />
             JSON
           </button>
         </div>
 
       </div>
 
-      {/* 2. Official Document Page Container */}
-      <div className="bg-white p-8 sm:p-12 md:p-16 shadow-md border border-slate-200/50 rounded-3xl mx-auto max-w-[900px] text-black font-sans print:shadow-none print:border-none print:p-0 print:m-0 print:max-w-none relative">
+      {/* 2. Official Document Preview Sheet */}
+      <div className="bg-white p-8 sm:p-12 md:p-16 shadow-premium border border-slate-100 rounded-3xl mx-auto max-w-[900px] text-black font-serif print:shadow-none print:border-none print:p-0 print:m-0 print:max-w-none relative overflow-hidden">
         
+        {/* Decorative Gold top border for preview mode */}
+        <span className="absolute top-0 left-0 right-0 h-1.5 bg-gov-gold print:hidden"></span>
+
         {/* Official Header */}
-        <div className="text-center space-y-4 pb-6 border-b-2 border-black/80">
+        <div className="text-center space-y-4 pb-6 border-b-2 border-black">
           <GarudaEmblem />
           <h2 className="text-base sm:text-lg font-black tracking-wide">รายงานการตรวจรับพัสดุคอมพิวเตอร์</h2>
           
@@ -160,12 +161,12 @@ export default function OfficialReport({
         </div>
 
         {/* Verification Status Banner */}
-        <div className="py-4 flex justify-between items-center text-xs border-b border-slate-200 print:border-black">
+        <div className="py-4 flex justify-between items-center text-xs border-b border-black">
           <div>
             สถานะการตรวจรับงาน: <span className="font-bold">ผ่านเกณฑ์ทั้งสิ้น {stats.passedCount} จาก {stats.totalItems} รายการ</span>
           </div>
           <div>
-            มูลค่าตรวจผ่านรวม: <span className="font-black text-blue-700 print:text-black">{formatNumber(stats.passedBudget)} บาท</span>
+            มูลค่าตรวจผ่านรวม: <span className="font-black text-gov-navy print:text-black num-tabular">{formatNumber(stats.passedBudget)} บาท</span>
           </div>
         </div>
 
@@ -173,7 +174,7 @@ export default function OfficialReport({
         <div className="overflow-x-auto pt-6">
           <table className="w-full text-xs text-left border-collapse">
             <thead>
-              <tr className="border-b-2 border-black/80 text-center font-bold">
+              <tr className="border-b-2 border-black text-center font-bold">
                 <th className="px-2.5 py-2.5 w-12">ลำดับ</th>
                 <th className="px-3 py-2.5 text-left">รายการและรายละเอียดคุณลักษณะ</th>
                 <th className="px-2.5 py-2.5 w-16">จำนวน</th>
@@ -187,11 +188,11 @@ export default function OfficialReport({
               {renderItemRows()}
               
               {/* Grand Total Row */}
-              <tr className="border-t-2 border-black/80 font-black">
+              <tr className="border-t-2 border-black font-black">
                 <td colSpan={2} className="px-3 py-4 text-right uppercase tracking-wider">รวมงบประมาณจัดซื้อสุทธิ:</td>
                 <td colSpan={2} className="px-2.5 py-4 text-center">{stats.totalItems} รายการ</td>
                 <td className="px-2.5 py-4"></td>
-                <td className="px-2.5 py-4 text-right text-sm">{formatNumber(stats.totalBudget)}</td>
+                <td className="px-2.5 py-4 text-right text-sm num-tabular">{formatNumber(stats.totalBudget)}</td>
                 <td className="px-2.5 py-4"></td>
               </tr>
             </tbody>
@@ -199,7 +200,7 @@ export default function OfficialReport({
         </div>
 
         {/* Verification Signatures (Always at the bottom, page-break-avoid) */}
-        <div className="mt-12 pt-8 border-t border-black/20 break-inside-avoid space-y-6">
+        <div className="mt-12 pt-8 border-t border-black/20 print-no-break space-y-6">
           
           <div className="text-center text-xs leading-relaxed font-semibold">
             ขอรับรองว่าพัสดุตามรายการข้างต้น ได้รับการตรวจสอบคุณลักษณะเฉพาะและทดลองใช้งานแล้วเสร็จ ผลการตรวจรับเป็นไปตามเงื่อนไขสัญญาจัดซื้อทุกประการ
@@ -214,7 +215,7 @@ export default function OfficialReport({
                 
                 <div className="space-y-1">
                   <p className="text-xs font-bold">({member.name})</p>
-                  <p className="text-[10px] text-slate-500 print:text-black leading-relaxed font-medium">{member.position}</p>
+                  <p className="text-[10px] text-slate-700 print:text-black leading-relaxed font-medium">{member.position}</p>
                 </div>
 
               </div>

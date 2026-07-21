@@ -12,12 +12,10 @@ import {
 import { formatNumber } from '../utils/numberFormatter';
 
 export default function ItemCard({ item, onClick }) {
-  // Safe image resolution
   const imageSrc = item.images?.product 
     ? `./รูปภาพ/${item.images.product}` 
     : null;
 
-  // Render category badge with emoji
   const getCategoryLabel = (c) => {
     switch (c) {
       case 'connectivity': return '🔌 เชื่อมต่อ';
@@ -35,19 +33,19 @@ export default function ItemCard({ item, onClick }) {
   return (
     <div 
       onClick={onClick}
-      className="bg-white rounded-2xl shadow-sm border border-slate-100 hover:border-blue-200 hover:shadow-md transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden relative group"
+      className={`bg-white rounded-2xl shadow-premium border border-slate-100 hover:border-gov-gold/30 hover:shadow-floating hover:-translate-y-0.5 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden relative group`}
     >
-      {/* Upper Color Strip for visual variety */}
-      <span className={`h-1.5 w-full block ${
-        item.inspectStatus === 'passed' ? 'bg-emerald-500' :
-        item.inspectStatus === 'failed' ? 'bg-rose-500' : 'bg-amber-400'
+      {/* Visual indicator left strip */}
+      <span className={`absolute left-0 top-0 bottom-0 w-1.5 ${
+        item.inspectStatus === 'passed' ? 'bg-[#065f46]' :
+        item.inspectStatus === 'failed' ? 'bg-[#991b1b]' : 'bg-amber-400'
       }`}></span>
 
-      {/* Main card body */}
-      <div className="p-4 sm:p-5 flex gap-4 items-start relative z-10 flex-1">
+      {/* Card Content Body */}
+      <div className="p-5 flex gap-4 items-start pl-6">
         
-        {/* Left: Product Thumbnail */}
-        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden relative group-hover:scale-105 transition-transform duration-300">
+        {/* Left Thumbnail with high-end glass style */}
+        <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden relative group-hover:scale-[1.02] transition-transform duration-300 shadow-inner">
           {imageSrc ? (
             <img 
               src={imageSrc} 
@@ -58,45 +56,45 @@ export default function ItemCard({ item, onClick }) {
             />
           ) : (
             <div className="text-slate-300 flex flex-col items-center">
-              <ImageIcon className="w-6 h-6 stroke-[1.5]" />
-              <span className="text-[8px] font-semibold text-slate-400 mt-1 uppercase tracking-wider">No Photo</span>
+              <ImageIcon className="w-5 h-5 stroke-[1.2] text-slate-300" />
+              <span className="text-[7px] font-bold text-slate-400 mt-1 uppercase tracking-widest">No Photo</span>
             </div>
           )}
         </div>
 
-        {/* Right: Product Details */}
-        <div className="space-y-1.5 flex-1 min-w-0">
+        {/* Right Info Section */}
+        <div className="space-y-2 flex-1 min-w-0">
           
-          {/* Header row: ID & Badges */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="bg-slate-100 text-slate-600 font-bold text-[10px] px-2 py-0.5 rounded-md">
+          {/* Badge Rows */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="bg-gov-gold-light text-gov-gold font-bold text-[9px] px-2 py-0.5 rounded border border-gov-gold/15">
               ID {item.id}
             </span>
-            <span className="bg-blue-50 text-blue-700 font-bold text-[10px] px-2 py-0.5 rounded-md flex items-center gap-1">
-              <Layers className="w-3 h-3" />
+            <span className="bg-slate-50 border border-slate-200/50 text-neutral-slate font-bold text-[9px] px-2 py-0.5 rounded flex items-center gap-1">
+              <Layers className="w-2.5 h-2.5 text-gov-gold" />
               {getCategoryLabel(item.category)}
             </span>
-            <span className="bg-slate-50 border border-slate-200/50 text-slate-500 font-bold text-[10px] px-2 py-0.5 rounded-md flex items-center gap-1">
-              <MapPin className="w-3 h-3" />
+            <span className="bg-slate-50 border border-slate-200/50 text-neutral-slate font-bold text-[9px] px-2 py-0.5 rounded flex items-center gap-1">
+              <MapPin className="w-2.5 h-2.5 text-gov-blue" />
               {item.division}
             </span>
           </div>
 
           {/* Item Name */}
-          <h4 className="text-xs sm:text-sm font-bold text-slate-800 line-clamp-2 leading-relaxed" title={item.name}>
+          <h4 className="text-xs sm:text-sm font-bold text-gov-navy line-clamp-2 leading-relaxed" title={item.name}>
             {item.name}
           </h4>
 
-          {/* Price and Quantities */}
+          {/* Price details */}
           <div className="flex items-baseline justify-between pt-1">
             <div>
-              <span className="text-[10px] font-medium text-slate-400">ราคารวม: </span>
-              <span className="text-xs sm:text-sm font-black text-slate-800">
-                {formatNumber(item.qty * item.unit_price)} <span className="text-[10px] font-medium text-slate-400">บาท</span>
+              <span className="text-[9px] font-bold text-neutral-slate uppercase tracking-wider">มูลค่าจัดซื้อ: </span>
+              <span className="text-xs sm:text-sm font-black text-gov-navy num-tabular">
+                {formatNumber(item.qty * item.unit_price)} <span className="text-[10px] font-medium text-neutral-slate">บาท</span>
               </span>
             </div>
             <div className="text-right">
-              <span className="text-xs font-bold text-slate-600 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-md">
+              <span className="text-[10px] font-bold text-neutral-charcoal bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-lg">
                 {item.qty} {item.unit}
               </span>
             </div>
@@ -106,40 +104,40 @@ export default function ItemCard({ item, onClick }) {
 
       </div>
 
-      {/* Footer bar: Status & notes indicator */}
-      <div className="px-4 sm:px-5 py-2.5 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+      {/* Footer status bar */}
+      <div className="px-5 py-3 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between pl-6">
         
-        {/* Status Badge */}
+        {/* Status badges */}
         <div className="flex items-center gap-1.5">
           {item.inspectStatus === 'passed' ? (
-            <span className="text-emerald-600 flex items-center gap-1 text-[11px] font-bold">
-              <CheckCircle2 className="w-3.5 h-3.5 fill-emerald-50" />
+            <span className="text-status-passed flex items-center gap-1 text-[11px] font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-status-passed"></span>
               ผ่านการตรวจรับ
             </span>
           ) : item.inspectStatus === 'failed' ? (
-            <span className="text-rose-600 flex items-center gap-1 text-[11px] font-bold">
-              <XCircle className="w-3.5 h-3.5 fill-rose-50" />
+            <span className="text-status-failed flex items-center gap-1 text-[11px] font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-status-failed"></span>
               ไม่ผ่านเกณฑ์
             </span>
           ) : (
-            <span className="text-amber-500 flex items-center gap-1 text-[11px] font-bold">
-              <Clock3 className="w-3.5 h-3.5 fill-amber-50" />
+            <span className="text-status-pending flex items-center gap-1 text-[11px] font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
               อยู่ระหว่างตรวจ
             </span>
           )}
         </div>
 
-        {/* Indicators on Notes & Serials */}
+        {/* Note indicators */}
         <div className="flex items-center gap-2">
           {item.serial_number && (
-            <span className="bg-slate-100 text-slate-500 font-bold text-[9px] px-1.5 py-0.5 rounded flex items-center gap-1" title="มีหมายเลขซีเรียล">
-              <Tag className="w-2.5 h-2.5" />
+            <span className="bg-slate-100 text-slate-500 font-bold text-[8px] px-1.5 py-0.5 rounded border border-slate-200/40 flex items-center gap-0.5">
+              <Tag className="w-2.5 h-2.5 text-gov-gold" />
               S/N
             </span>
           )}
           {item.notes && (
-            <span className="text-slate-400 flex items-center gap-0.5 text-xs font-medium" title={item.notes}>
-              <MessageSquareCode className="w-3.5 h-3.5" />
+            <span className="text-neutral-slate hover:text-gov-navy transition-colors flex items-center" title={item.notes}>
+              <MessageSquareCode className="w-4 h-4 text-gov-gold" />
             </span>
           )}
         </div>

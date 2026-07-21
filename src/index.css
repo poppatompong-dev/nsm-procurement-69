@@ -1,1 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Prompt:wght@300;400;500;600;700;800&family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --color-gov-navy: #0b132b;
+  --color-gov-blue: #1c2541;
+  --color-gov-gold: #c5a880; /* Champagne Gold */
+  --color-gov-gold-light: #f9f6f0;
+  --color-gov-gold-hover: #b4936b;
+  
+  --color-neutral-warm: #fcfbfa;
+  --color-neutral-slate: #64748b;
+  --color-neutral-charcoal: #1e293b;
+  
+  --color-status-passed: #065f46; /* Deep Emerald */
+  --color-status-passed-light: #ecfdf5;
+  --color-status-pending: #b45309; /* Amber */
+  --color-status-pending-light: #fffbeb;
+  --color-status-failed: #991b1b; /* Muted Red */
+  --color-status-failed-light: #fef2f2;
+  
+  --font-sans: "Inter", "Prompt", sans-serif;
+  --font-serif: "Sarabun", "TH Sarabun PSK", serif;
+  
+  --shadow-premium: 0 4px 20px -2px rgba(11, 19, 43, 0.04), 0 2px 8px -1px rgba(11, 19, 43, 0.02);
+  --shadow-floating: 0 12px 30px -5px rgba(11, 19, 43, 0.08), 0 4px 12px -2px rgba(11, 19, 43, 0.03);
+  --shadow-modal: 0 20px 50px -12px rgba(11, 19, 43, 0.15);
+  
+  --animate-fade-in: fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-scale-in: scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-neutral-warm);
+  color: var(--color-neutral-charcoal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom tabular figures for aligned numbers */
+.num-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Print CSS adjustments for clean layout spacing */
+@media print {
+  body {
+    background-color: white !important;
+    color: black !important;
+    font-family: var(--font-serif) !important;
+  }
+  
+  .print-no-break {
+    break-inside: avoid !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+  
+  .print-hide {
+    display: none !important;
+  }
+}
