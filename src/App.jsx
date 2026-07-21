@@ -390,8 +390,8 @@ export default function App() {
         
         {/* Sidebar Brand header */}
         <div className="p-5 bg-slate-950/40 flex items-center gap-3 border-b border-slate-800/40 relative">
-          <div className="w-8 h-8 rounded-lg bg-gov-gold flex items-center justify-center font-black text-sm text-gov-navy shadow-md">
-            กย.
+          <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-white/15">
+            <img src="/logo.png" alt="Municipality Logo" className="w-full h-full object-cover" />
           </div>
           <div>
             <h1 className="text-xs font-bold tracking-wider uppercase text-slate-100">เทศบาลนครนครสวรรค์</h1>
