@@ -16,7 +16,12 @@
 *   **[DEPLOYMENT.md](file:///d:/วัสดุคอม 49 รายการ 200769/docs/DEPLOYMENT.md):** ขั้นตอนการรันและการเผยแพร่ผ่านบริการออนไลน์ Firebase Hosting
 *   **[CHANGELOG.md](file:///d:/วัสดุคอม 49 รายการ 200769/docs/CHANGELOG.md):** บันทึกประวัติการพัฒนาและฟีเจอร์ที่ได้รับการอัปเดตแต่ละรุ่น
 
-### 2. คู่มือและบริบทสำหรับ AI (User & AI Guidelines)
+### 2. รายงานเทคโนโลยีและระเบียบภาครัฐ (Enterprise Reports)
+*   **[procurement_inspection_platform_report.md](file:///d:/วัสดุคอม 49 รายการ 200769/docs/procurement_inspection_platform_report.md):** รายงานการออกแบบสถาปัตยกรรมเทคโนโลยี แพลตฟอร์มระบบตรวจรับพัสดุภาครัฐอัจฉริยะ (Technical Architecture Report)
+*   **[premium_ui_design_report.md](file:///d:/วัสดุคอม 49 รายการ 200769/docs/premium_ui_design_report.md):** รายงานสรุปการยกระดับอินเทอร์เฟซผู้ใช้ระบบตรวจรับพัสดุอัจฉริยะ (Premium UI/UX Design & Tokens)
+*   **[system_documentation_framework.md](file:///d:/วัสดุคอม 49 รายการ 200769/docs/system_documentation_framework.md):** กรอบเอกสารประกอบระบบสำหรับการเสนอผู้เชี่ยวชาญ คณะกรรมการ และผู้ตรวจสอบระบบ
+
+### 3. คู่มือและบริบทสำหรับ AI (User & AI Guidelines)
 *   **[USER_GUIDE.md](file:///d:/วัสดุคอม 49 รายการ 200769/docs/USER_GUIDE.md):** คู่มือผู้ใช้สำหรับคณะกรรมการตรวจรับพัสดุในการตรวจสอบ การแนบหลักฐาน และการแชร์ลิงก์
 *   **[AI_CONTEXT.md](file:///d:/วัสดุคอม 49 รายการ 200769/docs/AI_CONTEXT.md):** คู่มือสรุปโครงสร้างโปรเจกต์และข้อกำหนดการเขียนโค้ดสำหรับ Coding AI (Gemini/Claude) เพื่อใช้บำรุงรักษาระบบอย่างรวดเร็ว
 
