@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   DollarSign, 
   Package, 
@@ -8,11 +8,122 @@ import {
   UserCheck, 
   Edit3, 
   Save, 
-  Info
+  Info,
+  ShieldCheck,
+  Zap,
+  Boxes
 } from 'lucide-react';
 import { formatNumber } from '../utils/numberFormatter';
 
 const BAR_COLORS = ['#1c2541', '#2c3e6b', '#3d5a80', '#5c80a6', '#98c1d9', '#adc5d9', '#cbd5e1', '#e2e8f0'];
+
+// 3D Procurement Ecosystem Topology Renderer using Canvas
+function Ecosystem3DViewer() {
+  const canvasRef = useRef(null);
+  const [angle, setAngle] = useState(0);
+
+  useEffect(() => {
+    let animId;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    const render = () => {
+      const width = canvas.width = canvas.offsetWidth || 280;
+      const height = canvas.height = canvas.offsetHeight || 180;
+      ctx.clearRect(0, 0, width, height);
+
+      // Node coordinates in 3D
+      const nodes = [
+        { x: -0.8, y: -0.3, z: -0.4, label: '🔌 เชื่อมต่อ' },
+        { x: 0.8, y: -0.3, z: -0.4, label: '💾 จัดเก็บ' },
+        { x: 0.5, y: 0.5, z: -0.6, label: '🖱️ อุปกรณ์พ่วง' },
+        { x: -0.5, y: 0.5, z: -0.6, label: '🤖 บอร์ดควบคุม' },
+        { x: 0, y: -0.7, z: 0.8, label: '🖨️ หมึกพิมพ์' },
+        { x: 0, y: 0.7, z: 0, label: '🛠️ ช่างคอม' }
+      ];
+
+      const rad = (angle * Math.PI) / 180;
+      const projected = nodes.map(n => {
+        // Rotate around Y axis
+        const rx = n.x * Math.cos(rad) - n.z * Math.sin(rad);
+        const rz = n.x * Math.sin(rad) + n.z * Math.cos(rad);
+        
+        // Perspective projection
+        const dist = 2.5;
+        const fov = 1.6;
+        const scale = Math.min(width, height) * 0.4;
+        const scaleProj = fov / (dist - rz);
+
+        return {
+          x: width / 2 + rx * scale * scaleProj,
+          y: height / 2 + n.y * scale * scaleProj,
+          z: rz,
+          label: n.label
+        };
+      });
+
+      // Draw connection lines representing ecosystem data flow
+      ctx.strokeStyle = 'rgba(197, 168, 128, 0.15)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < projected.length; i++) {
+        for (let j = i + 1; j < projected.length; j++) {
+          ctx.beginPath();
+          ctx.moveTo(projected[i].x, projected[i].y);
+          ctx.lineTo(projected[j].x, projected[j].y);
+          ctx.stroke();
+        }
+      }
+
+      // Draw glowing lines to center hub node
+      const center = { x: width / 2, y: height / 2 };
+      ctx.strokeStyle = 'rgba(28, 37, 65, 0.2)';
+      projected.forEach(p => {
+        ctx.beginPath();
+        ctx.moveTo(center.x, center.y);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+      });
+
+      // Draw projected nodes
+      projected.forEach((p, idx) => {
+        // Draw pulse ring
+        const t = Date.now() * 0.003 + idx;
+        const r = 5 + Math.sin(t) * 2;
+        
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r + 4, 0, 2 * Math.PI);
+        ctx.fillStyle = 'rgba(197, 168, 128, 0.1)';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, r, 0, 2 * Math.PI);
+        ctx.fillStyle = idx % 2 === 0 ? '#1c2541' : '#c5a880';
+        ctx.fill();
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Node Label tags
+        ctx.fillStyle = 'rgba(11, 19, 43, 0.7)';
+        ctx.font = '8px sans-serif';
+        ctx.fillText(p.label, p.x + 8, p.y + 3);
+      });
+
+      setAngle(prev => (prev + 0.3) % 360);
+      animId = requestAnimationFrame(render);
+    };
+
+    render();
+    return () => cancelAnimationFrame(animId);
+  }, []);
+
+  return (
+    <div className="w-full h-full min-h-[140px] flex items-center justify-center relative">
+      <canvas ref={canvasRef} className="w-full h-full max-w-[280px] max-h-[180px]" />
+    </div>
+  );
+}
 
 export default function Dashboard({ 
   stats, 
@@ -30,6 +141,53 @@ export default function Dashboard({
   return (
     <div className="space-y-8 print:hidden animate-fade-in">
       
+      {/* Immersive Landing Command Center Hero Banner */}
+      <div className="relative bg-gradient-to-r from-gov-navy via-slate-900 to-gov-blue rounded-3xl p-6 sm:p-8 overflow-hidden border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6 shadow-floating">
+        
+        {/* Parallax ecosystem background dots */}
+        <div className="absolute inset-0 bg-dots opacity-5 pointer-events-none z-0"></div>
+        <span className="absolute bottom-0 left-0 right-0 h-1 bg-gov-gold"></span>
+
+        {/* Left Side: Command center info details */}
+        <div className="space-y-4 max-w-xl relative z-10 text-white">
+          <div className="flex items-center gap-2">
+            <span className="bg-gov-gold/20 text-gov-gold text-[9px] font-black border border-gov-gold/30 px-2.5 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+              <Zap className="w-3 h-3 text-gov-gold animate-bounce" />
+              Digital Command Center
+            </span>
+            <span className="bg-emerald-500/20 text-emerald-400 text-[9px] font-black border border-emerald-500/30 px-2.5 py-1 rounded-full uppercase tracking-wider">
+              ONLINE
+            </span>
+          </div>
+
+          <div className="space-y-1">
+            <h1 className="text-xl sm:text-2xl font-black tracking-wide text-slate-100">ระบบตรวจสอบพัสดุภาครัฐอัจฉริยะ</h1>
+            <p className="text-xs text-slate-400 leading-relaxed font-medium">
+              ศูนย์ปฏิบัติการตรวจรับวัสดุคอมพิวเตอร์ งบประมาณ พ.ศ. 2569 กองยุทธศาสตร์และงบประมาณ เทศบาลนครนครสวรรค์
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-4 pt-1.5 text-xs text-slate-300">
+            <div className="flex items-center gap-1.5">
+              <Boxes className="w-4.5 h-4.5 text-gov-gold" />
+              <span>พัสดุจัดซื้อ: <strong className="text-white num-tabular">{stats.totalItems} รายการ</strong></span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="w-4.5 h-4.5 text-emerald-400" />
+              <span>ตรวจเสร็จแล้ว: <strong className="text-white num-tabular">{progressPct}%</strong></span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side: Interactive 3D Topology Node */}
+        <div className="w-full md:w-auto shrink-0 relative z-10">
+          <div className="bg-slate-950/40 border border-slate-800/80 rounded-2xl p-4 flex items-center justify-center relative shadow-inner">
+            <Ecosystem3DViewer />
+          </div>
+        </div>
+
+      </div>
+
       {/* 1. Summary Statistics Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
         
@@ -103,13 +261,13 @@ export default function Dashboard({
 
       </div>
 
-      {/* 2. Visual Progress Bar */}
+      {/* 2. Visual Progress Bar with glowing orb effects */}
       <div className="bg-white p-6 rounded-2xl shadow-premium border border-slate-100 space-y-4">
         <div className="flex justify-between items-center text-xs sm:text-sm">
           <span className="font-bold text-gov-navy">ความก้าวหน้าการตรวจสอบรวมโครงการ</span>
           <span className="font-black text-gov-blue num-tabular">{progressPct}% ({stats.passedCount}/{stats.totalItems} รายการ)</span>
         </div>
-        <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+        <div className="relative w-full bg-slate-100 h-3.5 rounded-full overflow-hidden border border-slate-200/50 shadow-inner">
           <div 
             className="h-full bg-gradient-to-r from-gov-navy via-gov-blue to-gov-gold rounded-full transition-all duration-1000 ease-out"
             style={{ width: `${progressPct}%` }}

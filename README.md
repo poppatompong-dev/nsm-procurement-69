@@ -20,6 +20,7 @@
 *   **[procurement_inspection_platform_report.md](file:///d:/วัสดุคอม 49 รายการ 200769/docs/procurement_inspection_platform_report.md):** รายงานการออกแบบสถาปัตยกรรมเทคโนโลยี แพลตฟอร์มระบบตรวจรับพัสดุภาครัฐอัจฉริยะ (Technical Architecture Report)
 *   **[premium_ui_design_report.md](file:///d:/วัสดุคอม 49 รายการ 200769/docs/premium_ui_design_report.md):** รายงานสรุปการยกระดับอินเทอร์เฟซผู้ใช้ระบบตรวจรับพัสดุอัจฉริยะ (Premium UI/UX Design & Tokens)
 *   **[system_documentation_framework.md](file:///d:/วัสดุคอม 49 รายการ 200769/docs/system_documentation_framework.md):** กรอบเอกสารประกอบระบบสำหรับการเสนอผู้เชี่ยวชาญ คณะกรรมการ และผู้ตรวจสอบระบบ
+*   **[walkthrough.md](file:///d:/วัสดุคอม 49 รายการ 200769/docs/walkthrough.md):** รายงานผลการดำเนินงานการปรับปรุงอินเทอร์เฟซผู้ใช้ 3 มิติเชิงปฏิบัติการ (3D Immersive UI Walkthrough)
 
 ### 3. คู่มือและบริบทสำหรับ AI (User & AI Guidelines)
 *   **[USER_GUIDE.md](file:///d:/วัสดุคอม 49 รายการ 200769/docs/USER_GUIDE.md):** คู่มือผู้ใช้สำหรับคณะกรรมการตรวจรับพัสดุในการตรวจสอบ การแนบหลักฐาน และการแชร์ลิงก์

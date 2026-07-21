@@ -33,7 +33,7 @@ export default function ItemCard({ item, onClick }) {
   return (
     <div 
       onClick={onClick}
-      className={`bg-white rounded-2xl shadow-premium border border-slate-100 hover:border-gov-gold/30 hover:shadow-floating hover:-translate-y-0.5 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden relative group`}
+      className="premium-3d-card bg-white rounded-2xl shadow-premium border border-slate-100 cursor-pointer flex flex-col justify-between overflow-hidden relative group"
     >
       {/* Visual indicator left strip */}
       <span className={`absolute left-0 top-0 bottom-0 w-1.5 ${
@@ -42,7 +42,7 @@ export default function ItemCard({ item, onClick }) {
       }`}></span>
 
       {/* Card Content Body */}
-      <div className="p-5 flex gap-4 items-start pl-6">
+      <div className="p-5 flex gap-4 items-start pl-6 premium-3d-card-inner">
         
         {/* Left Thumbnail with high-end glass style */}
         <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden relative group-hover:scale-[1.02] transition-transform duration-300 shadow-inner">

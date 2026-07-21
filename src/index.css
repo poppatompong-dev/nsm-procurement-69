@@ -28,6 +28,7 @@
   
   --animate-fade-in: fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   --animate-scale-in: scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-up: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes fade-in {
@@ -40,17 +41,58 @@
   to { transform: scale(1); opacity: 1; }
 }
 
+@keyframes slide-up {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--color-neutral-warm);
   color: var(--color-neutral-charcoal);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 /* Custom tabular figures for aligned numbers */
 .num-tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* Immersive 3D Tilt Card Styles */
+.premium-3d-card {
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (hover: hover) {
+  .premium-3d-card:hover {
+    transform: rotateX(4deg) rotateY(-4deg) translateZ(8px);
+    box-shadow: 0 20px 40px -10px rgba(11, 19, 43, 0.10), 0 8px 16px -4px rgba(11, 19, 43, 0.04);
+  }
+}
+
+.premium-3d-card-inner {
+  transform: translateZ(20px);
+}
+
+/* Immersive Orb / Sphere Styles */
+.orb-glow {
+  background: radial-gradient(circle at 30% 30%, #ffffff, #f9f6f0 50%, #c5a880 100%);
+  box-shadow: inset -4px -4px 12px rgba(11, 19, 43, 0.15), 0 12px 30px -5px rgba(197, 168, 128, 0.25);
+}
+
+.orb-glow-emerald {
+  background: radial-gradient(circle at 30% 30%, #ffffff, #ecfdf5 50%, #065f46 100%);
+  box-shadow: inset -4px -4px 12px rgba(6, 95, 70, 0.15), 0 12px 30px -5px rgba(6, 95, 70, 0.20);
+}
+
+/* Parallax ecosystem background dots */
+.bg-dots {
+  background-image: radial-gradient(#cbd5e1 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
 }
 
 /* Print CSS adjustments for clean layout spacing */
@@ -71,5 +113,20 @@ body {
   
   .print-hide {
     display: none !important;
+  }
+}
+
+/* Reduced motion preference support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-delay: 0s !important;
+    animation-duration: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0s !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .premium-3d-card:hover {
+    transform: none !important;
   }
 }

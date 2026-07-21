@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   CheckCircle, 
@@ -11,11 +11,14 @@ import {
   Square,
   Upload,
   ArrowRight,
-  ShieldAlert
+  ShieldAlert,
+  Rotate3d,
+  MousePointerClick
 } from 'lucide-react';
 import { formatNumber } from '../utils/numberFormatter';
 
 const IMAGE_TYPES = [
+  { key: 'simulation', label: '🖥️ สำรวจโมเดล 3D' },
   { key: 'product', label: '📸 รูปสินค้าจริง' },
   { key: 'serial', label: '🏷️ หมายเลข S/N' },
   { key: 'asset_plate', label: '🏛️ ป้ายครุภัณฑ์' },
@@ -33,6 +36,275 @@ const CHECKLIST_ITEMS = [
   { key: 'test_run', label: 'ทดลองเปิดใช้งานแล้ว' },
   { key: 'warranty_checked', label: 'มีใบรับประกัน/คู่มือครบ' }
 ];
+
+// Interactive 3D Wireframe Chassis Renderer using HTML5 Canvas
+function Interactive3DViewer({ name, onHotspotClick }) {
+  const canvasRef = useRef(null);
+  const [rotation, setRotation] = useState({ y: 45, x: 15 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const [selectedHotspot, setSelectedHotspot] = useState(null);
+
+  // 3D vertices of a computer chassis / main cabinet
+  const vertices = [
+    {x: -1, y: -0.7, z: -0.5}, // 0: Bottom Back Left
+    {x: 1, y: -0.7, z: -0.5},  // 1: Bottom Back Right
+    {x: 1, y: 0.7, z: -0.5},   // 2: Top Back Right
+    {x: -1, y: 0.7, z: -0.5},  // 3: Top Back Left
+    {x: -1, y: -0.7, z: 0.5},  // 4: Bottom Front Left
+    {x: 1, y: -0.7, z: 0.5},   // 5: Bottom Front Right
+    {x: 1, y: 0.7, z: 0.5},    // 6: Top Front Right
+    {x: -1, y: 0.7, z: 0.5}    // 7: Top Front Left
+  ];
+
+  const edges = [
+    [0, 1], [1, 2], [2, 3], [3, 0], // Back Face
+    [4, 5], [5, 6], [6, 7], [7, 4], // Front Face
+    [0, 4], [1, 5], [2, 6], [3, 7]  // Connection lines
+  ];
+
+  // Hotspots mapped to specific 3D coordinates on the chassis
+  const hotspots = [
+    { 
+      id: 'sn', 
+      label: '🏷️ ตรวจสอบ Serial Number', 
+      desc: 'แผ่นป้ายบาร์โค้ด S/N ระบุโดยผู้ผลิต อยู่ข้างหลังเครื่อง',
+      pos: { x: 0.8, y: -0.4, z: -0.5 } 
+    },
+    { 
+      id: 'asset', 
+      label: '🏛️ ตรวจเลขครุภัณฑ์', 
+      desc: 'จุดติดสติกเกอร์รหัสสินทรัพย์ครุภัณฑ์ของเทศบาลนครนครสวรรค์',
+      pos: { x: -0.5, y: 0.5, z: 0.5 } 
+    },
+    { 
+      id: 'ports', 
+      label: '🔌 พอร์ตเชื่อมต่อ (Interfaces)', 
+      desc: 'ช่องสัญญาณเน็ตเวิร์ก RJ45/USB ต้องอยู่ในสภาพเรียบร้อย',
+      pos: { x: 0.3, y: 0.2, z: -0.5 } 
+    }
+  ];
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    // Set display size based on parent
+    const width = canvas.width = canvas.offsetWidth || 300;
+    const height = canvas.height = canvas.offsetHeight || 300;
+    const scale = Math.min(width, height) * 0.35;
+    
+    ctx.clearRect(0, 0, width, height);
+
+    // Apply 3D Rotation Y and X
+    const radY = (rotation.y * Math.PI) / 180;
+    const radX = (rotation.x * Math.PI) / 180;
+
+    const projected = vertices.map(v => {
+      // Rotation Y
+      let x1 = v.x * Math.cos(radY) - v.z * Math.sin(radY);
+      let z1 = v.x * Math.sin(radY) + v.z * Math.cos(radY);
+      
+      // Rotation X
+      let y2 = v.y * Math.cos(radX) - z1 * Math.sin(radX);
+      let z2 = v.y * Math.sin(radX) + z1 * Math.cos(radX);
+      
+      // Perspective projection
+      const dist = 3.0;
+      const fov = 1.8;
+      const scaleProj = fov / (dist - z2);
+      
+      return {
+        x: width / 2 + x1 * scale * scaleProj,
+        y: height / 2 + y2 * scale * scaleProj,
+        z: z2
+      };
+    });
+
+    // Draw grid dots background for immersive context
+    ctx.strokeStyle = 'rgba(197, 168, 128, 0.08)';
+    ctx.lineWidth = 1;
+    for (let i = 20; i < width; i += 20) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i, height);
+      ctx.stroke();
+    }
+    for (let j = 20; j < height; j += 20) {
+      ctx.beginPath();
+      ctx.moveTo(0, j);
+      ctx.lineTo(width, j);
+      ctx.stroke();
+    }
+
+    // Draw 3D wireframe edges
+    ctx.strokeStyle = '#1c2541';
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    
+    edges.forEach(([start, end]) => {
+      ctx.beginPath();
+      ctx.moveTo(projected[start].x, projected[start].y);
+      ctx.lineTo(projected[end].x, projected[end].y);
+      ctx.stroke();
+    });
+
+    // Draw inner hardware circuit details
+    ctx.strokeStyle = 'rgba(197, 168, 128, 0.4)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(projected[0].x, projected[0].y);
+    ctx.lineTo(projected[6].x, projected[6].y);
+    ctx.moveTo(projected[3].x, projected[3].y);
+    ctx.lineTo(projected[5].x, projected[5].y);
+    ctx.stroke();
+
+    // Draw front bezel circle panel
+    ctx.beginPath();
+    const frontCenter = {
+      x: (projected[4].x + projected[5].x + projected[6].x + projected[7].x) / 4,
+      y: (projected[4].y + projected[5].y + projected[6].y + projected[7].y) / 4
+    };
+    ctx.arc(frontCenter.x, frontCenter.y, scale * 0.1, 0, 2 * Math.PI);
+    ctx.fillStyle = 'rgba(197, 168, 128, 0.1)';
+    ctx.fill();
+    ctx.strokeStyle = '#c5a880';
+    ctx.stroke();
+
+    // Draw interactive hotspots on projected coordinates
+    hotspots.forEach(hs => {
+      let x1 = hs.pos.x * Math.cos(radY) - hs.pos.z * Math.sin(radY);
+      let z1 = hs.pos.x * Math.sin(radY) + hs.pos.z * Math.cos(radY);
+      let y2 = hs.pos.y * Math.cos(radX) - z1 * Math.sin(radX);
+      let z2 = hs.pos.y * Math.sin(radX) + z1 * Math.cos(radX);
+      
+      const dist = 3.0;
+      const fov = 1.8;
+      const scaleProj = fov / (dist - z2);
+      
+      const px = width / 2 + x1 * scale * scaleProj;
+      const py = height / 2 + y2 * scale * scaleProj;
+
+      // Draw pulsating glow around active hotspots
+      const time = Date.now() * 0.003;
+      const pulseSize = 8 + Math.sin(time) * 3;
+
+      ctx.beginPath();
+      ctx.arc(px, py, pulseSize, 0, 2 * Math.PI);
+      ctx.fillStyle = 'rgba(197, 168, 128, 0.25)';
+      ctx.fill();
+      ctx.strokeStyle = '#c5a880';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(px, py, 4, 0, 2 * Math.PI);
+      ctx.fillStyle = '#0b132b';
+      ctx.fill();
+
+      // Store projected screen coordinates in hotspot object for click detection
+      hs.screenX = px;
+      hs.screenY = py;
+    });
+
+    // Draw pointer dragging instruction info overlay
+    ctx.fillStyle = 'rgba(11, 19, 43, 0.6)';
+    ctx.font = 'bold 9px sans-serif';
+    ctx.fillText('คลิกลากเมาส์ / ปัดหน้าจอเพื่อหมุนมุมมอง 3D', 15, height - 15);
+  }, [rotation]);
+
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragStart.current.x;
+    const dy = e.clientY - dragStart.current.y;
+    setRotation(prev => ({
+      y: prev.y + dx * 0.5,
+      x: Math.max(-45, Math.min(45, prev.x - dy * 0.5))
+    }));
+    dragStart.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleCanvasClick = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+
+    // Detect click hit collision with hotspots (within 12px range)
+    const clickedHs = hotspots.find(hs => {
+      if (hs.screenX === undefined || hs.screenY === undefined) return false;
+      const dx = hs.screenX - clickX;
+      const dy = hs.screenY - clickY;
+      return Math.sqrt(dx*dx + dy*dy) < 14;
+    });
+
+    if (clickedHs) {
+      setSelectedHotspot(clickedHs);
+      onHotspotClick(clickedHs.id);
+    } else {
+      setSelectedHotspot(null);
+    }
+  };
+
+  return (
+    <div className="relative w-full h-full bg-slate-50 flex flex-col items-center select-none">
+      <canvas 
+        ref={canvasRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onClick={handleCanvasClick}
+        onTouchStart={(e) => {
+          setIsDragging(true);
+          dragStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }}
+        onTouchMove={(e) => {
+          if (!isDragging) return;
+          const dx = e.touches[0].clientX - dragStart.current.x;
+          const dy = e.touches[0].clientY - dragStart.current.y;
+          setRotation(prev => ({
+            y: prev.y + dx * 0.5,
+            x: Math.max(-45, Math.min(45, prev.x - dy * 0.5))
+          }));
+          dragStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }}
+        onTouchEnd={() => setIsDragging(false)}
+        className="w-full h-full cursor-grab active:cursor-grabbing"
+      />
+
+      {/* Floating Hotspot Details Popover */}
+      {selectedHotspot && (
+        <div className="absolute top-4 left-4 right-4 bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-floating border border-gov-gold/30 text-xs text-neutral-charcoal space-y-1.5 animate-slide-up z-10">
+          <div className="flex justify-between items-center">
+            <span className="font-black text-gov-navy flex items-center gap-1">
+              <MousePointerClick className="w-3.5 h-3.5 text-gov-gold" />
+              {selectedHotspot.label}
+            </span>
+            <button 
+              onClick={() => setSelectedHotspot(null)}
+              className="text-slate-400 hover:text-slate-600 font-bold p-0.5"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <p className="text-[11px] text-neutral-slate leading-relaxed">{selectedHotspot.desc}</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ItemDetailModal({ 
   item, 
@@ -67,17 +339,11 @@ export default function ItemDetailModal({
     ...item.images
   });
 
-  const [activeImgTab, setActiveImgTab] = useState('product');
+  const [activeImgTab, setActiveImgTab] = useState('simulation');
 
   const handleChecklistChange = (key, checked) => {
     const updatedChecklist = { ...checklist, [key]: checked };
     setChecklist(updatedChecklist);
-    
-    // Automatically switch main status to passed if all are checked
-    const allChecked = Object.values(updatedChecklist).every(val => val === true);
-    if (allChecked) {
-      setInspectStatus('passed');
-    }
   };
 
   const handleImageUpload = (key, file) => {
@@ -89,7 +355,23 @@ export default function ItemDetailModal({
     reader.readAsDataURL(file);
   };
 
+  const handleHotspotClick = (hotspotId) => {
+    if (hotspotId === 'sn') {
+      setChecklist(prev => ({ ...prev, serial_recorded: true }));
+      // Focus on serial field logic (soft UX feedback)
+    } else if (hotspotId === 'asset') {
+      setChecklist(prev => ({ ...prev, brand_matches: true, model_matches: true }));
+    }
+  };
+
   const handleSave = () => {
+    // Check if checklist is completed before allowing saving passed status
+    const allChecked = Object.values(checklist).every(val => val === true);
+    if (inspectStatus === 'passed' && !allChecked) {
+      alert('⚠️ ไม่สามารถให้ความเห็นผ่านตรวจรับพัสดุได้! คณะกรรมการต้องทำเครื่องหมายในเช็คลิสต์ตรวจพัสดุครบทั้ง 8 ข้อเป็นจริงก่อน');
+      return;
+    }
+
     const history = [...(item.history || [])];
     const timestamp = new Date().toISOString();
     const currentUser = committee[1]?.name || 'กรรมการตรวจรับ';
@@ -153,8 +435,9 @@ export default function ItemDetailModal({
         <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between relative">
           <span className="absolute bottom-0 left-0 right-0 h-1 bg-gov-gold"></span>
           <div className="space-y-0.5">
-            <span className="text-[9px] font-black text-gov-gold uppercase tracking-widest">
-              Inspection Workspace • พัสดุชิ้นที่ {item.id}
+            <span className="text-[9px] font-black text-gov-gold uppercase tracking-widest flex items-center gap-1.5">
+              <Rotate3d className="w-3.5 h-3.5 text-gov-gold animate-spin" style={{ animationDuration: '4s' }} />
+              Command Center Workspace • รายการพัสดุที่ {item.id}
             </span>
             <h3 className="text-sm sm:text-base font-bold line-clamp-1 text-slate-100">{item.name}</h3>
           </div>
@@ -169,15 +452,20 @@ export default function ItemDetailModal({
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 bg-neutral-warm">
           
-          {/* Left Column: Spec and Gallery (5 cols) */}
+          {/* Left Column: 3D Simulator & Gallery View (5 cols) */}
           <div className="lg:col-span-5 space-y-5">
             
-            {/* Gallery View */}
+            {/* Interactive Area */}
             <div className="space-y-2.5">
-              <span className="block text-[10px] font-bold text-neutral-slate uppercase tracking-wider">แกลเลอรีภาพถ่ายหลักฐานพัสดุ</span>
+              <span className="block text-[10px] font-bold text-neutral-slate uppercase tracking-wider">แผงสำรวจหลักฐานพัสดุ & 3D จำลอง</span>
               
               <div className="aspect-square bg-slate-50 border border-slate-200/50 rounded-2xl flex items-center justify-center overflow-hidden relative shadow-inner">
-                {images[activeImgTab] ? (
+                {activeImgTab === 'simulation' ? (
+                  <Interactive3DViewer 
+                    name={item.name} 
+                    onHotspotClick={handleHotspotClick}
+                  />
+                ) : images[activeImgTab] ? (
                   <img 
                     src={images[activeImgTab].startsWith('data:') ? images[activeImgTab] : `./รูปภาพ/${images[activeImgTab]}`}
                     alt="Inspection Evidence"
@@ -191,19 +479,21 @@ export default function ItemDetailModal({
                   </div>
                 )}
                 
-                <label className="absolute bottom-3 right-3 bg-gov-navy/90 hover:bg-gov-navy text-white px-3 py-1.5 rounded-xl cursor-pointer transition-all flex items-center gap-1 shadow-premium text-xs font-bold border border-gov-gold/20">
-                  <Upload className="w-3.5 h-3.5 text-gov-gold" />
-                  อัปโหลดรูป
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={(e) => handleImageUpload(activeImgTab, e.target.files[0])}
-                    className="hidden" 
-                  />
-                </label>
+                {activeImgTab !== 'simulation' && (
+                  <label className="absolute bottom-3 right-3 bg-gov-navy/90 hover:bg-gov-navy text-white px-3 py-1.5 rounded-xl cursor-pointer transition-all flex items-center gap-1 shadow-premium text-xs font-bold border border-gov-gold/20">
+                    <Upload className="w-3.5 h-3.5 text-gov-gold" />
+                    อัปโหลดรูป
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={(e) => handleImageUpload(activeImgTab, e.target.files[0])}
+                      className="hidden" 
+                    />
+                  </label>
+                )}
               </div>
 
-              {/* Gallery category buttons */}
+              {/* Tab Category Switchers */}
               <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-none">
                 {IMAGE_TYPES.map(t => (
                   <button
@@ -215,7 +505,8 @@ export default function ItemDetailModal({
                         : 'bg-white border-slate-200/60 text-neutral-slate hover:bg-slate-50'
                     }`}
                   >
-                    {t.key === 'product' && images.product ? '📸 สินค้า' :
+                    {t.key === 'simulation' ? '🖥️ สำรวจ 3D' :
+                     t.key === 'product' && images.product ? '📸 สินค้า' :
                      t.key === 'serial' && images.serial ? '🏷️ S/N' :
                      t.key === 'asset_plate' && images.asset_plate ? '🏛️ ครุภัณฑ์' :
                      t.key === 'box' && images.box ? '📦 กล่อง' :
@@ -225,7 +516,7 @@ export default function ItemDetailModal({
               </div>
             </div>
 
-            {/* Spec Card */}
+            {/* Specification Details Box */}
             <div className="p-4.5 bg-white rounded-2xl border border-slate-100 shadow-premium space-y-2 relative overflow-hidden">
               <span className="absolute top-0 left-0 right-0 h-1 bg-gov-gold"></span>
               <span className="block text-[9px] font-bold text-gov-gold uppercase tracking-widest flex items-center gap-1">
@@ -234,7 +525,7 @@ export default function ItemDetailModal({
               <p className="text-xs text-neutral-charcoal leading-relaxed font-semibold whitespace-pre-line">{item.spec}</p>
             </div>
 
-            {/* Pricing details */}
+            {/* Budget Values */}
             <div className="p-4.5 bg-white rounded-2xl border border-slate-100 shadow-premium grid grid-cols-2 gap-4">
               <div>
                 <span className="text-[9px] text-neutral-slate font-bold uppercase tracking-wider block">ราคาต่อหน่วย</span>
@@ -248,14 +539,14 @@ export default function ItemDetailModal({
 
           </div>
 
-          {/* Right Column: Checklist, forms, status (7 cols) */}
+          {/* Right Column: Visual Steps, Serials and Status Details (7 cols) */}
           <div className="lg:col-span-7 space-y-5">
             
-            {/* Checklist items */}
+            {/* Visual Steps Checklist */}
             <div className="space-y-2.5">
               <div className="flex justify-between items-center text-[10px] font-bold text-neutral-slate uppercase tracking-wider">
-                <span>รายการตรวจสอบตามระเบียบพัสดุ (Inspection Checklist)</span>
-                <span className="text-gov-blue font-bold">ผ่านแล้ว {checkedCount}/8 รายการ</span>
+                <span>ความก้าวหน้ารายการตรวจสอบพัสดุ (8 ขั้นตอน)</span>
+                <span className="text-status-passed font-bold">ดำเนินการสำเร็จ {checkedCount}/8</span>
               </div>
               
               <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-premium grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -267,14 +558,14 @@ export default function ItemDetailModal({
                       onClick={() => handleChecklistChange(check.key, !isChecked)}
                       className={`flex items-center gap-2.5 p-2.5 rounded-xl text-left transition-all border ${
                         isChecked 
-                          ? 'bg-emerald-50/40 border-emerald-500/20 text-emerald-800 font-semibold shadow-inner' 
+                          ? 'bg-emerald-50/40 border-emerald-500/20 text-emerald-800 font-semibold shadow-inner scale-[0.98]' 
                           : 'bg-slate-50 border-slate-200/50 text-neutral-slate hover:bg-slate-100/50'
                       }`}
                     >
                       {isChecked ? (
-                        <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <CheckCircle className="w-4.5 h-4.5 text-emerald-600 shrink-0" />
                       ) : (
-                        <Square className="w-4 h-4 text-slate-300 shrink-0" />
+                        <Square className="w-4.5 h-4.5 text-slate-300 shrink-0" />
                       )}
                       <span className="text-xs leading-none">{check.label}</span>
                     </button>
@@ -283,7 +574,7 @@ export default function ItemDetailModal({
               </div>
             </div>
 
-            {/* Asset IDs inputs */}
+            {/* Assets Serial & Mac Inputs */}
             <div className="space-y-2.5">
               <span className="block text-[10px] font-bold text-neutral-slate uppercase tracking-wider">ข้อมูลประจำผลิตภัณฑ์ (Serials & Assets)</span>
               
@@ -335,11 +626,25 @@ export default function ItemDetailModal({
 
             {/* Status Selector */}
             <div className="space-y-2">
-              <span className="block text-[10px] font-bold text-neutral-slate uppercase tracking-wider">ความเห็นสถานะการตรวจรับสุดท้าย</span>
+              <div className="flex justify-between items-center text-[10px] font-bold text-neutral-slate uppercase tracking-wider">
+                <span>ความเห็นสถานะการตรวจรับสุดท้าย</span>
+                {checkedCount < 8 && (
+                  <span className="text-status-failed flex items-center gap-1 font-black">
+                    <ShieldAlert className="w-3.5 h-3.5" /> ต้องติ๊ก Checklist ครบ 8 ข้อจึงยืนยันผ่านได้
+                  </span>
+                )}
+              </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setInspectStatus('passed')}
+                  onClick={() => {
+                    if (checkedCount < 8) {
+                      alert('⚠️ กรุณาติ๊กช่องรายการตรวจสอบให้ครบ 8 ข้อก่อน จึงจะเปลี่ยนสถานะเป็นผ่านตรวจรับได้ครับ');
+                      return;
+                    }
+                    setInspectStatus('passed');
+                  }}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all border ${
+                    checkedCount < 8 ? 'opacity-40 cursor-not-allowed bg-slate-50 border-slate-200 text-slate-300' :
                     inspectStatus === 'passed' 
                       ? 'bg-status-passed border-status-passed text-white shadow-sm' 
                       : 'bg-white border-slate-200 text-neutral-slate hover:bg-slate-50'
