@@ -13,7 +13,8 @@ import {
   CheckCircle2,
   FileSpreadsheet,
   Download,
-  Printer
+  Printer,
+  AlertTriangle
 } from 'lucide-react';
 
 // Import initial dataset
