@@ -10,6 +10,7 @@ import {
   Tag
 } from 'lucide-react';
 import { formatNumber } from '../utils/numberFormatter';
+import CategoryMockup from './CategoryMockup';
 
 export default function ItemCard({ item, onClick }) {
   const imageSrc = item.images?.product 
@@ -55,10 +56,7 @@ export default function ItemCard({ item, onClick }) {
               onError={(e) => { e.target.style.display = 'none'; }}
             />
           ) : (
-            <div className="text-slate-300 flex flex-col items-center">
-              <ImageIcon className="w-5 h-5 stroke-[1.2] text-slate-300" />
-              <span className="text-[7px] font-bold text-slate-400 mt-1 uppercase tracking-widest">No Photo</span>
-            </div>
+            <CategoryMockup category={item.category} size="medium" />
           )}
         </div>
 

@@ -16,6 +16,7 @@ import {
   MousePointerClick
 } from 'lucide-react';
 import { formatNumber } from '../utils/numberFormatter';
+import CategoryMockup from './CategoryMockup';
 
 const IMAGE_TYPES = [
   { key: 'simulation', label: '🖥️ สำรวจโมเดล 3D' },
@@ -472,6 +473,8 @@ export default function ItemDetailModal({
                     className="w-full h-full object-cover"
                     onError={(e) => { e.target.src = ''; }}
                   />
+                ) : activeImgTab === 'product' ? (
+                  <CategoryMockup category={item.category} size="large" />
                 ) : (
                   <div className="text-slate-300 flex flex-col items-center">
                     <ImageIcon className="w-8 h-8 stroke-[1.2] text-slate-300" />

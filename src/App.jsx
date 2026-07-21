@@ -446,13 +446,13 @@ export default function App() {
         <span className="absolute top-0 bottom-0 right-0 w-0.5 bg-gov-gold"></span>
         
         {/* Sidebar Brand header */}
-        <div className="p-5 bg-slate-950/40 flex items-center gap-3 border-b border-slate-800/40 relative">
-          <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-white/15">
-            <img src="/logo.png" alt="Municipality Logo" className="w-full h-full object-cover" />
+        <div className="p-6 bg-slate-950/40 flex flex-col items-center text-center gap-3.5 border-b border-slate-800/40 relative">
+          <div className="w-18 h-18 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden shrink-0 shadow-floating border border-gov-gold/30 p-2.5 transition-all duration-300 hover:border-gov-gold">
+            <img src="/logo.png" alt="Municipality Logo" className="w-full h-full object-contain" />
           </div>
-          <div>
-            <h1 className="text-xs font-bold tracking-wider uppercase text-slate-100">เทศบาลนครนครสวรรค์</h1>
-            <p className="text-[9px] text-gov-gold font-bold uppercase tracking-widest mt-0.5">ระบบดิจิทัลตรวจรับพัสดุ</p>
+          <div className="space-y-1">
+            <h1 className="text-xs sm:text-sm font-black tracking-widest uppercase text-slate-100">เทศบาลนครนครสวรรค์</h1>
+            <p className="text-[9px] text-gov-gold font-bold uppercase tracking-widest">ระบบดิจิทัลตรวจรับพัสดุ</p>
           </div>
         </div>
 
