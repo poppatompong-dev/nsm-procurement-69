@@ -63,6 +63,10 @@ export default function App() {
   const [sortBy, setSortBy] = useState('id-asc');
   const [viewMode, setViewMode] = useState('grid');
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(9); // Default 9 items per page
+
   // Selected item for detail modal
   const [selectedItem, setSelectedItem] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
@@ -116,6 +120,8 @@ export default function App() {
       if (parsedState.hasImageFilter) setHasImageFilter(parsedState.hasImageFilter);
       if (parsedState.minPrice) setMinPrice(parsedState.minPrice);
       if (parsedState.maxPrice) setMaxPrice(parsedState.maxPrice);
+      if (parsedState.currentPage) setCurrentPage(parsedState.currentPage);
+      if (parsedState.pageSize) setPageSize(parsedState.pageSize);
       
       if (parsedState.selectedItemId) {
         const found = currentItems.find(i => i.id === parsedState.selectedItemId);
@@ -148,6 +154,11 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('procurement_committee_v3', JSON.stringify(committee));
   }, [committee]);
+
+  // Reset pagination to first page when any filters or sorting change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, categoryFilter, divisionFilter, statusFilter, hasNotesFilter, hasImageFilter, minPrice, maxPrice, sortBy, pageSize]);
 
   // Statistics Calculations
   const stats = useMemo(() => {
@@ -282,6 +293,14 @@ export default function App() {
     return sorted;
   }, [items, searchQuery, categoryFilter, divisionFilter, statusFilter, hasNotesFilter, hasImageFilter, minPrice, maxPrice, sortBy]);
 
+  // Sliced paginated items
+  const paginatedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredItems.slice(startIndex, startIndex + pageSize);
+  }, [filteredItems, currentPage, pageSize]);
+
+  const totalPages = Math.max(Math.ceil(filteredItems.length / pageSize), 1);
+
   const handleEditCommitteeStart = () => {
     setEditedCommittee([...committee]);
     setIsEditingCommittee(true);
@@ -324,6 +343,8 @@ export default function App() {
         hasImageFilter,
         minPrice,
         maxPrice,
+        currentPage,
+        pageSize,
         selectedItemId: selectedItem ? selectedItem.id : null
       };
       const link = generateShareLink(committee, items, uiState);
@@ -628,13 +649,45 @@ export default function App() {
                 setViewMode={setViewMode}
               />
 
+              {/* Dynamic Items Info Label / Page Size Controls */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-bold text-neutral-slate bg-white p-4.5 rounded-2xl border border-slate-100/60 shadow-premium">
+                <div className="flex items-center gap-2">
+                  <span className="bg-gov-gold-light text-gov-gold px-2.5 py-1 rounded-lg border border-gov-gold/20 font-black">
+                    🔍 ค้นพบพัสดุ
+                  </span>
+                  <span>
+                    พบพัสดุคุณลักษณะตรงตามตัวกรอง <strong className="text-gov-navy num-tabular">{filteredItems.length}</strong> รายการ 
+                    {filteredItems.length > 0 && (
+                      <>
+                        {" "}(แสดงรายการที่ <strong className="text-gov-navy num-tabular">{(currentPage - 1) * pageSize + 1}</strong> ถึง <strong className="text-gov-navy num-tabular">{Math.min(currentPage * pageSize, filteredItems.length)}</strong>)
+                      </>
+                    )}
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-2 shrink-0">
+                  <span>แสดงหน้าละ:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    className="bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg text-xs font-bold text-gov-navy focus:outline-none focus:border-gov-gold focus:ring-1 focus:ring-gov-gold cursor-pointer"
+                  >
+                    <option value={6}>6 รายการ</option>
+                    <option value={9}>9 รายการ</option>
+                    <option value={12}>12 รายการ</option>
+                    <option value={24}>24 รายการ</option>
+                    <option value={48}>48 รายการ</option>
+                  </select>
+                </div>
+              </div>
+
               {/* Items Rendered by chosen ViewMode */}
               {filteredItems.length > 0 ? (
                 <>
                   {/* GRID VIEW */}
                   {viewMode === 'grid' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-slide-up">
-                      {filteredItems.map(item => (
+                      {paginatedItems.map(item => (
                         <ItemCard 
                           key={item.id} 
                           item={item} 
@@ -647,7 +700,7 @@ export default function App() {
                   {/* LIST VIEW (Compact Stack Cards) */}
                   {viewMode === 'list' && (
                     <div className="space-y-4 animate-slide-up">
-                      {filteredItems.map(item => (
+                      {paginatedItems.map(item => (
                         <div 
                           key={item.id}
                           onClick={() => setSelectedItem(item)}
@@ -698,7 +751,7 @@ export default function App() {
                             </tr>
                           </thead>
                           <tbody>
-                            {filteredItems.map(item => (
+                            {paginatedItems.map(item => (
                               <tr 
                                 key={item.id} 
                                 className="border-b border-slate-100 hover:bg-slate-50 transition-colors font-medium"
@@ -731,6 +784,83 @@ export default function App() {
                           </tbody>
                         </table>
                       </div>
+                    </div>
+                  )}
+
+                  {/* PAGINATION CONTROLS */}
+                  {totalPages > 1 && (
+                    <div className="flex flex-wrap items-center justify-center gap-1.5 pt-4 text-xs font-bold print:hidden">
+                      <button
+                        onClick={() => setCurrentPage(1)}
+                        disabled={currentPage === 1}
+                        className={`px-3 py-2 rounded-xl border transition-all ${
+                          currentPage === 1 
+                            ? 'bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed' 
+                            : 'bg-white border-slate-200 text-gov-navy hover:bg-slate-50 cursor-pointer'
+                        }`}
+                      >
+                        หน้าแรก
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className={`px-3 py-2 rounded-xl border transition-all ${
+                          currentPage === 1 
+                            ? 'bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed' 
+                            : 'bg-white border-slate-200 text-gov-navy hover:bg-slate-50 cursor-pointer'
+                        }`}
+                      >
+                        ก่อนหน้า
+                      </button>
+
+                      {/* Page Numbers */}
+                      {Array.from({ length: totalPages }, (_, idx) => idx + 1)
+                        .filter(page => {
+                          return Math.abs(page - currentPage) <= 2 || page === 1 || page === totalPages;
+                        })
+                        .map((page, idx, arr) => {
+                          const prevPage = arr[idx - 1];
+                          const showEllipsis = prevPage && page - prevPage > 1;
+
+                          return (
+                            <React.Fragment key={page}>
+                              {showEllipsis && <span className="px-2 text-neutral-slate">...</span>}
+                              <button
+                                onClick={() => setCurrentPage(page)}
+                                className={`w-9 h-9 rounded-xl border font-bold transition-all ${
+                                  currentPage === page 
+                                    ? 'bg-gov-gold border-gov-gold text-gov-navy shadow-sm' 
+                                    : 'bg-white border-slate-200 text-gov-navy hover:bg-slate-50 cursor-pointer'
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            </React.Fragment>
+                          );
+                        })}
+
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className={`px-3 py-2 rounded-xl border transition-all ${
+                          currentPage === totalPages 
+                            ? 'bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed' 
+                            : 'bg-white border-slate-200 text-gov-navy hover:bg-slate-50 cursor-pointer'
+                        }`}
+                      >
+                        ถัดไป
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                        className={`px-3 py-2 rounded-xl border transition-all ${
+                          currentPage === totalPages 
+                            ? 'bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed' 
+                            : 'bg-white border-slate-200 text-gov-navy hover:bg-slate-50 cursor-pointer'
+                        }`}
+                      >
+                        หน้าสุดท้าย
+                      </button>
                     </div>
                   )}
                 </>
@@ -783,7 +913,7 @@ export default function App() {
             <ExcelImporter onImport={handleImportExcel} />
           )}
 
-          {/* Tab 5: Built-in User Manual (📖 คู่มือแนะนำการใช้งาน) */}
+          {/* Tab 5: Built-in User Manual */}
           {activeTab === 'manual' && (
             <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
               
@@ -825,7 +955,7 @@ export default function App() {
                     การสำรวจพัสดุและการใช้นิ้วปัดหมุน 3D
                   </h4>
                   <p className="text-xs text-neutral-slate leading-relaxed">
-                    ในแท็บตรวจรับรายชิ้น ให้กดปุ่ม **"เปิด"** บนพัสดุรายการที่ต้องการ เพื่อเข้าสู่หน้าต่างปฏิบัติงาน (Inspection Workspace) คณะกรรมการสามารถกวาดนิ้วเพื่อหมุนดูแบบจำลองพัสดุแบบ 360° และคลิกที่มาร์กเกอร์ (Hotspots) เพื่อให้ระบบทำการติ๊ก Checklist ตรรกะส่วนควบอุปกรณ์ที่กำหนดไว้ตามสัญญาให้อัตโนมัติ
+                    ในแท็บตรวจรับรายชิ้น ให้กดปุ่ม **"เปิด"** บนพัสดุรายการที่ต้องการ เพื่อเข้าสู่หน้าต่างปฏิบัติงาน (Inspection Workspace) คณะกรรมการสามารถกวาดนิ้วเพื่อหมุนดูอุปกรณ์คอมพิวเตอร์/เน็ตเวิร์กจำลองได้ 360° และคลิกที่มาร์กเกอร์ (Hotspots) เพื่อให้ระบบทำการติ๊ก Checklist ตรรกะส่วนควบอุปกรณ์ที่กำหนดไว้ตามสัญญาให้อัตโนมัติ
                   </p>
                 </div>
 

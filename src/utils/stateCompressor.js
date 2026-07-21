@@ -62,6 +62,8 @@ export const parseUrlState = (currentItems) => {
       if (decoded.mn) result.minPrice = decoded.mn;
       if (decoded.mx) result.maxPrice = decoded.mx;
       if (decoded.sel) result.selectedItemId = decoded.sel;
+      if (decoded.cp) result.currentPage = decoded.cp;
+      if (decoded.ps) result.pageSize = decoded.ps;
 
       return result;
     } catch (e) {
@@ -118,7 +120,9 @@ export const generateShareLink = (committee, items, uiState = {}) => {
       imf: uiState.hasImageFilter,
       mn: uiState.minPrice,
       mx: uiState.maxPrice,
-      sel: uiState.selectedItemId
+      sel: uiState.selectedItemId,
+      cp: uiState.currentPage,
+      ps: uiState.pageSize
     };
     
     const json = JSON.stringify(state);
