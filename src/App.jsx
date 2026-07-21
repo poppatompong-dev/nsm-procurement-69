@@ -14,7 +14,9 @@ import {
   FileSpreadsheet,
   Download,
   Printer,
-  AlertTriangle
+  AlertTriangle,
+  Menu,
+  X
 } from 'lucide-react';
 
 // Import initial dataset
@@ -73,6 +75,9 @@ export default function App() {
   
   // Share modal state
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  // Mobile menu drawer state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Initial State Loading & URL State Parsing
   useEffect(() => {
@@ -442,24 +447,39 @@ export default function App() {
     <div className="min-h-screen bg-neutral-warm flex flex-col lg:flex-row text-neutral-charcoal antialiased font-sans">
       
       {/* 1. Sidebar Navigation (Left) */}
-      <aside className="w-full lg:w-64 bg-gov-navy text-slate-100 flex flex-col shrink-0 border-r border-slate-800 print:hidden z-30 relative">
+      <aside className="w-full lg:w-64 bg-gov-navy text-slate-100 flex flex-col shrink-0 border-r border-slate-800 print:hidden z-30 relative animate-fade-in">
         <span className="absolute top-0 bottom-0 right-0 w-0.5 bg-gov-gold"></span>
         
         {/* Sidebar Brand header */}
-        <div className="p-6 bg-slate-950/40 flex flex-col items-center text-center gap-3.5 border-b border-slate-800/40 relative">
-          <div className="w-18 h-18 rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden shrink-0 shadow-floating border border-gov-gold/30 p-2.5 transition-all duration-300 hover:border-gov-gold">
-            <img src="/logo.png" alt="Municipality Logo" className="w-full h-full object-contain" />
+        <div className="p-4 lg:p-6 bg-slate-950/40 flex flex-row lg:flex-col items-center justify-between lg:justify-center text-center gap-3.5 border-b border-slate-800/40 relative">
+          <div className="flex items-center gap-3 lg:flex-col lg:gap-3.5">
+            <div className="w-10 h-10 lg:w-18 lg:h-18 rounded-xl lg:rounded-2xl bg-white/5 flex items-center justify-center overflow-hidden shrink-0 shadow-floating border border-gov-gold/30 p-1 lg:p-2.5 transition-all duration-300 hover:border-gov-gold">
+              <img src="/logo.png" alt="Municipality Logo" className="w-full h-full object-contain" />
+            </div>
+            <div className="space-y-0.5 lg:space-y-1 text-left lg:text-center">
+              <h1 className="text-xs sm:text-sm font-black tracking-wider lg:tracking-widest uppercase text-slate-100">เทศบาลนครนครสวรรค์</h1>
+              <p className="text-[9px] text-gov-gold font-bold uppercase tracking-widest">ระบบดิจิทัลตรวจรับพัสดุ</p>
+            </div>
           </div>
-          <div className="space-y-1">
-            <h1 className="text-xs sm:text-sm font-black tracking-widest uppercase text-slate-100">เทศบาลนครนครสวรรค์</h1>
-            <p className="text-[9px] text-gov-gold font-bold uppercase tracking-widest">ระบบดิจิทัลตรวจรับพัสดุ</p>
-          </div>
+          
+          {/* Mobile menu hamburger toggle button */}
+          <button 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="lg:hidden p-2 text-slate-400 hover:text-white focus:outline-none cursor-pointer"
+            title="เปิด/ปิด เมนูนำทาง"
+          >
+            {isMobileMenuOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Menu className="w-6 h-6" />
+            )}
+          </button>
         </div>
 
         {/* Sidebar Navigation Options */}
-        <nav className="flex-1 p-4 space-y-1 pt-6">
+        <nav className={`flex-1 p-4 space-y-1 lg:block ${isMobileMenuOpen ? 'block' : 'hidden'}`}>
           <button
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => { setActiveTab('dashboard'); setIsMobileMenuOpen(false); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               activeTab === 'dashboard' 
                 ? 'bg-gov-gold text-gov-navy shadow-sm' 
@@ -472,7 +492,7 @@ export default function App() {
           </button>
           
           <button
-            onClick={() => setActiveTab('items')}
+            onClick={() => { setActiveTab('items'); setIsMobileMenuOpen(false); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               activeTab === 'items' 
                 ? 'bg-gov-gold text-gov-navy shadow-sm' 
@@ -485,7 +505,7 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => setActiveTab('report')}
+            onClick={() => { setActiveTab('report'); setIsMobileMenuOpen(false); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               activeTab === 'report' 
                 ? 'bg-gov-gold text-gov-navy shadow-sm' 
@@ -498,7 +518,7 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => setActiveTab('importer')}
+            onClick={() => { setActiveTab('importer'); setIsMobileMenuOpen(false); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               activeTab === 'importer' 
                 ? 'bg-gov-gold text-gov-navy shadow-sm' 
@@ -511,7 +531,7 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => setActiveTab('manual')}
+            onClick={() => { setActiveTab('manual'); setIsMobileMenuOpen(false); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               activeTab === 'manual' 
                 ? 'bg-gov-gold text-gov-navy shadow-sm' 
@@ -525,14 +545,14 @@ export default function App() {
         </nav>
 
         {/* Sidebar Footer options */}
-        <div className="p-4 bg-slate-950/20 border-t border-slate-800/40 space-y-3">
+        <div className={`p-4 bg-slate-950/20 border-t border-slate-800/40 space-y-3 lg:block ${isMobileMenuOpen ? 'block' : 'hidden'}`}>
           <div className="text-[9px] text-slate-400 leading-relaxed font-bold">
             ระบบตรวจสอบสัญญางานจัดซื้อ 2569 คำสั่งเทศบาลที่ ๘๖๔/๒๕๖๙
           </div>
           
           <div className="flex gap-2">
             <button
-              onClick={() => setIsShareModalOpen(true)}
+              onClick={() => { setIsShareModalOpen(true); setIsMobileMenuOpen(false); }}
               className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[10px] font-bold transition-all border cursor-pointer bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700"
               title="เปิดช่องทางแชร์สถานะ คัดลอกคิวอาร์โค้ด และสั่งพิมพ์รายงานสรุป"
             >
