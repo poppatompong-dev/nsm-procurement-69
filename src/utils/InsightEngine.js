@@ -1,3 +1,5 @@
+import { inspectionRepository } from './inspectionRepository';
+
 /**
  * Automated Analytics Insight & Recommendation Engine for Government Procurement
  * Analytically processes the items database and extracts patterns, anomalies, risks, and suggestions.
@@ -15,27 +17,36 @@ export const generateInsightsAndRecommendations = (items) => {
 
   const passedPct = Math.round((passed / total) * 100);
 
-  // 1. Critical & Warnings: Duplicate Serial Numbers Check
-  const serialMap = {};
-  items.forEach(item => {
-    const sn = (item.serial_number || '').trim().toUpperCase();
-    if (sn && sn !== 'N/A' && sn !== '-') {
-      if (!serialMap[sn]) serialMap[sn] = [];
-      serialMap[sn].push(item.id);
+  // Load active template information
+  const projectConfig = inspectionRepository.getProjectConfig();
+  const template = inspectionRepository.getTemplateById(projectConfig.templateId);
+
+  // 1. Critical & Warnings: Duplicate Values Check for unique fields
+  // In IT computer we look for duplicate serial number. In general, we look for duplicate values of any key starting with "serial" or "code" or "asset".
+  const uniqueFields = template.fields.filter(f => f.key.includes('serial') || f.key.includes('asset') || f.key.includes('number') || f.key.includes('lot'));
+  
+  uniqueFields.forEach(field => {
+    const valueMap = {};
+    items.forEach(item => {
+      const val = (item[field.key] || '').trim().toUpperCase();
+      if (val && val !== 'N/A' && val !== '-' && val !== 'ไม่มี') {
+        if (!valueMap[val]) valueMap[val] = [];
+        valueMap[val].push(item.id);
+      }
+    });
+
+    const duplicates = Object.entries(valueMap).filter(([_, ids]) => ids.length > 1);
+    if (duplicates.length > 0) {
+      duplicates.forEach(([val, ids]) => {
+        insights.push({
+          type: 'critical',
+          title: `ตรวจพบค่าซ้ำในฟิลด์ ${field.label}`,
+          message: `ข้อมูล "${val}" ถูกบันทึกซ้ำกันในพัสดุรหัส #${ids.join(', #')} ซึ่งปกติควรเป็นค่าเฉพาะชิ้น (Unique)`,
+          icon: 'AlertOctagon'
+        });
+      });
     }
   });
-
-  const duplicateSerials = Object.entries(serialMap).filter(([_, ids]) => ids.length > 1);
-  if (duplicateSerials.length > 0) {
-    duplicateSerials.forEach(([sn, ids]) => {
-      insights.push({
-        type: 'critical',
-        title: 'ตรวจพบหมายเลข Serial Number ซ้ำกันในระบบ',
-        message: `หมายเลข S/N "${sn}" ถูกบันทึกซ้ำกันในพัสดุรหัส #${ids.join(', #')} ซึ่งอาจระบุเครื่องสลับกันหรือส่งของซ้ำซ้อน`,
-        icon: 'AlertOctagon'
-      });
-    });
-  }
 
   // 2. High-value pending inspection alerts
   const highValuePending = items.filter(i => i.inspectStatus === 'pending' && (i.qty * i.unit_price) >= 50000);
@@ -53,7 +64,7 @@ export const generateInsightsAndRecommendations = (items) => {
         type: 'high-priority',
         targetId: item.id,
         title: `ควรเร่งตรวจสอบพัสดุ #${item.id} (${item.name.slice(0, 35)}...)`,
-        description: `เป็นรายการงบจัดซื้อสูงรวม ${((item.qty * item.unit_price) / 1000).toFixed(1)}k บาท เพื่อปิดยอดความเสี่ยงโครงการก่อนครบกำหนด`
+        description: `เป็นรายการงบจัดซื้อสูงรวม ${((item.qty * item.unit_price) / 1000).toFixed(1)}k บาท เพื่อระงับความเสี่ยงโครงการตรวจงานก่อนล่าช้า`
       });
     });
   }
@@ -69,43 +80,59 @@ export const generateInsightsAndRecommendations = (items) => {
     insights.push({
       type: 'warning',
       title: 'รายการพัสดุขาดภาพหลักฐานแนบท้าย',
-      message: `พบพัสดุจัดซื้อจำนวน ${missingPhotos.length} รายการ ที่ยังไม่มีการอัปโหลดไฟล์รูปภาพหรือหลักฐานถ่ายสภาพหน้างานจริง`,
+      message: `พบรายการสิ่งส่งมอบจำนวน ${missingPhotos.length} รายการ ที่ยังไม่ได้อัปโหลดไฟล์รูปถ่ายยืนยันสภาพพัสดุจริงหรือไฟล์เอกสารแนบ`,
       icon: 'CameraOff'
     });
   }
 
-  // 4. Missing Serial/MAC address for network/electronics categories
-  const electronicsNeedsSerial = items.filter(i => 
-    (i.category === 'connectivity' || i.category === 'electronics' || i.category === 'peripherals') &&
-    !i.serial_number && 
-    i.inspectStatus !== 'passed'
+  // 4. Missing required template fields
+  const requiredFields = template.fields.filter(f => f.required);
+  const incompleteFieldsItems = items.filter(i => 
+    i.inspectStatus !== 'passed' && requiredFields.some(f => !i[f.key])
   );
 
-  if (electronicsNeedsSerial.length > 0) {
+  if (incompleteFieldsItems.length > 0 && requiredFields.length > 0) {
     insights.push({
       type: 'warning',
-      title: 'อุปกรณ์อิเล็กทรอนิกส์ยังไม่ลงทะเบียน Serial Number',
-      message: `มีอุปกรณ์เชื่อมต่อ/อิเล็กทรอนิกส์ ${electronicsNeedsSerial.length} ชิ้น ที่ขาดหมายเลข S/N หรือ MAC Address ตามระเบียบราชการ`,
+      title: 'ข้อมูลฟิลด์ที่จำเป็นตามแบบฟอร์มยังกรอกไม่ครบ',
+      message: `มีรายการตรวจรับ ${incompleteFieldsItems.length} ชิ้น ที่ขาดข้อมูลฟิลด์บังคับในเกณฑ์ของ ${template.name}`,
       icon: 'KeyRound'
     });
     
-    electronicsNeedsSerial.slice(0, 2).forEach(item => {
+    incompleteFieldsItems.slice(0, 2).forEach(item => {
+      const missingFieldName = requiredFields.find(f => !item[f.key])?.label || 'รายละเอียดพัสดุ';
       recommendations.push({
         type: 'normal',
         targetId: item.id,
-        title: `บันทึกหมายเลข S/N ของ #${item.id}`,
-        description: `อุปกรณ์ประเภท ${item.category === 'connectivity' ? 'เชื่อมต่อเน็ตเวิร์ก' : 'อิเล็กทรอนิกส์'} จำเป็นต้องลงทะเบียนระบุเลขอ้างอิงก่อนผ่านตรวจรับ`
+        title: `กรอกข้อมูล "${missingFieldName}" ของ #${item.id}`,
+        description: `จำเป็นต้องระบุตามแม่แบบการตรวจรับประเภท ${template.name} ก่อนอนุมัติผ่าน`
       });
     });
   }
 
-  // 5. Normal recommendations: notes to follow up
+  // 5. Incomplete checklist checks for active items
+  const incompleteChecklistCount = items.filter(i => {
+    if (i.inspectStatus === 'passed') return false;
+    const checkedLength = Object.values(i.checklist || {}).filter(Boolean).length;
+    return checkedLength < template.checklist.length;
+  }).length;
+
+  if (incompleteChecklistCount > 0) {
+    insights.push({
+      type: 'warning',
+      title: 'เช็คลิสต์การตรวจเช็คย่อยยังทำไม่ครบ',
+      message: `พบรายการสิ่งของ ${incompleteChecklistCount} รายการ ที่คณะกรรมการยังตรวจสอบหัวข้อเกณฑ์ย่อย Checklist ไม่ครบถ้วน`,
+      icon: 'CheckSquare'
+    });
+  }
+
+  // 6. Normal recommendations: notes to follow up
   const failedItems = items.filter(i => i.inspectStatus === 'failed');
   if (failedItems.length > 0) {
     insights.push({
       type: 'critical',
-      title: 'มีรายการพัสดุที่ไม่ผ่านเกณฑ์มาตรฐาน TOR',
-      message: `ตรวจพบพัสดุที่กรรมการปฏิเสธการรับมอบจำนวน ${failedItems.length} รายการ ซึ่งมีข้อสังเกตเรื่องสเปกไม่ตรงสัญญา`,
+      title: 'มีพัสดุประเมินไม่ผ่านเกณฑ์ส่งมอบ',
+      message: `ตรวจพบรายการตรวจรับมีสถานะชำรุด/ต้องแก้ไขจำนวน ${failedItems.length} รายการ จากความเห็นของคณะกรรมการร่วมกัน`,
       icon: 'XCircle'
     });
 
@@ -113,13 +140,13 @@ export const generateInsightsAndRecommendations = (items) => {
       recommendations.push({
         type: 'critical-action',
         targetId: item.id,
-        title: `ประสานงานปรับเปลี่ยนพัสดุ #${item.id}`,
-        description: `พัสดุมีสเปกไม่ตรงตาม TOR สัญญา หรือชำรุดเสียหาย ต้องทำหนังสือส่งคืนผู้ขายพร้อมข้อสังเกต: "${item.notes || 'ไม่ระบุ'}"`
+        title: `ติดตามงานแก้ไขและส่งตรวจซ้ำ #${item.id}`,
+        description: `พัสดุขัดแย้งกับสเปกสัญญาก่อสร้าง/TOR ต้องส่งหนังสือแจ้งผู้ขายตามหมายเหตุ: "${item.notes || 'ชำรุดเสียหาย/ไม่พบหมายเลขเครื่อง'}"`
       });
     });
   }
 
-  // 6. Category average cost analysis (Budget warning)
+  // 7. Category average cost analysis (Budget warning)
   const categoryBudgets = {};
   items.forEach(i => {
     categoryBudgets[i.category] = (categoryBudgets[i.category] || 0) + (i.qty * i.unit_price);
@@ -137,27 +164,28 @@ export const generateInsightsAndRecommendations = (items) => {
       toner: '🖨️ หมึกพิมพ์',
       consumables: '🔋 วัสดุสิ้นเปลือง'
     };
+    const categoryLabel = catNames[topCategory[0]] || `หมวด ${topCategory[0]}`;
     insights.push({
       type: 'info',
-      title: 'หมวดหมู่ที่ใช้งบประมาณจัดซื้อสูงสุด',
-      message: `หมวดหมู่ "${catNames[topCategory[0]] || topCategory[0]}" ใช้งบจัดสรรสูงสุดในโครงการรวม ${(topCategory[1] / 1000).toFixed(1)}k บาท`,
+      title: 'หมวดหมู่การใช้งบประมาณจัดสรรสูงสุด',
+      message: `หมวดหมู่ "${categoryLabel}" มีการใช้งบจัดจัดซื้อรวมสูงสุดในระบบที่ ${(topCategory[1] / 1000).toFixed(1)}k บาท`,
       icon: 'TrendingUp'
     });
   }
 
-  // 7. General Progress insights
+  // 8. General Progress insights
   if (passedPct === 100) {
     insights.push({
       type: 'info',
       title: 'โครงการผ่านการตรวจรับครบถ้วน 100%',
-      message: 'พัสดุครุภัณฑ์คอมพิวเตอร์ทั้งหมดได้รับการสำรวจและบันทึกความก้าวหน้าเรียบร้อยแล้ว คณะกรรมการสามารถลงนามปิดเล่มตรวจงานได้',
+      message: `พัสดุและรายการตรวจในสัญญาทั้งหมดได้รับการประเมินตามแม่แบบ ${template.name} เรียบร้อย ครบถ้วน พร้อมเซ็นหนังสือส่งมอบปิดงบ`,
       icon: 'Award'
     });
   } else {
     insights.push({
       type: 'info',
-      title: 'ความคืบหน้าการทำงานภาพรวม',
-      message: `โครงการตรวจรับไปแล้วคิดเป็น ${passedPct}% เหลือพัสดุอยู่ระหว่างรอการดำเนินการอีก ${pending} รายการ`,
+      title: 'ความคืบหน้าภาพรวมโครงการ',
+      message: `โครงการตรวจรับสำเร็จไปแล้วคิดเป็น ${passedPct}% เหลือรายการที่อยู่ระหว่างรอการดำเนินการตรวจสอบอีก ${pending} รายการ`,
       icon: 'PieChart'
     });
   }

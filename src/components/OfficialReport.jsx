@@ -1,6 +1,7 @@
 import React from 'react';
 import { Printer, Download, FileJson, FileSpreadsheet, QrCode } from 'lucide-react';
 import { formatNumber } from '../utils/numberFormatter';
+import { inspectionRepository } from '../utils/inspectionRepository';
 
 const GarudaEmblem = () => (
   <svg 
@@ -27,7 +28,9 @@ export default function OfficialReport({
   handleExportJSON,
   divisions
 }) {
-  
+  const projectConfig = inspectionRepository.getProjectConfig();
+  const template = inspectionRepository.getTemplateById(projectConfig.templateId);
+
   const renderItemRows = () => {
     return items.map((item, idx) => (
       <tr key={item.id} className="border-b border-slate-300 print:border-black print-no-break">
@@ -37,9 +40,13 @@ export default function OfficialReport({
           <div className="text-[10px] font-normal text-slate-500 print:text-slate-700 mt-1 whitespace-pre-line leading-relaxed font-medium">
             {item.spec}
           </div>
-          {item.serial_number && (
-            <div className="text-[9px] font-bold text-gov-navy print:text-black mt-1 num-tabular">
-              S/N: {item.serial_number} {item.mac_address && `| MAC: ${item.mac_address}`} {item.asset_number && `| รหัสครุภัณฑ์: ${item.asset_number}`}
+          {template.fields.some(f => item[f.key]) && (
+            <div className="text-[9px] font-bold text-gov-navy print:text-black mt-1 num-tabular flex flex-wrap gap-x-2 gap-y-0.5">
+              {template.fields.filter(f => item[f.key]).map(f => (
+                <span key={f.key} className="bg-slate-100 print:bg-transparent px-1 py-0.5 rounded border border-slate-200/50 print:border-none">
+                  {f.label}: {item[f.key]}
+                </span>
+              ))}
             </div>
           )}
           {item.notes && (

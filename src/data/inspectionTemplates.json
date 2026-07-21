@@ -1,0 +1,185 @@
+{
+  "templates": [
+    {
+      "id": "it-computer",
+      "name": "ครุภัณฑ์คอมพิวเตอร์และอุปกรณ์ต่อพ่วง",
+      "description": "แบบตรวจรับคอมพิวเตอร์ โน้ตบุ๊ก แท็บเล็ต อุปกรณ์เครือข่าย และชิ้นส่วนอิเล็กทรอนิกส์",
+      "version": "1.0",
+      "fields": [
+        {
+          "key": "serial_number",
+          "label": "หมายเลขเครื่อง (Serial Number)",
+          "type": "text",
+          "required": true,
+          "placeholder": "กรอก S/N เช่น CN-0XY123-..."
+        },
+        {
+          "key": "mac_address",
+          "label": "หมายเลข MAC Address",
+          "type": "text",
+          "required": false,
+          "placeholder": "กรอก MAC เช่น AA:BB:CC:DD:EE:FF"
+        },
+        {
+          "key": "asset_number",
+          "label": "หมายเลขครุภัณฑ์หลวง",
+          "type": "text",
+          "required": true,
+          "placeholder": "กรอกเลขครุภัณฑ์ เช่น นส.01.02/69"
+        }
+      ],
+      "checklist": [
+        { "id": "qty_correct", "label": "จำนวนถูกต้องตามสัญญา", "required": true },
+        { "id": "model_matches", "label": "ยี่ห้อและรุ่นตรงตาม TOR", "required": true },
+        { "id": "brand_matches", "label": "แบรนด์/ผู้ผลิตตรงตามข้อกำหนด", "required": true },
+        { "id": "serial_recorded", "label": "บันทึกหมายเลข S/N ลงระบบเรียบร้อย", "required": true },
+        { "id": "physical_condition", "label": "สภาพภายนอกสมบูรณ์ ไม่มีตำหนิชำรุด", "required": true },
+        { "id": "accessories_complete", "label": "อุปกรณ์ส่วนควบและคู่มือครบถ้วน", "required": true },
+        { "id": "test_run", "label": "ทดสอบการทำงานเบื้องต้น (Test Run) ผ่าน", "required": true },
+        { "id": "warranty_checked", "label": "เอกสารประกันสินค้าถูกต้อง", "required": true }
+      ],
+      "evidence": [
+        { "key": "product", "label": "📸 ภาพถ่ายสินค้าจริง" },
+        { "key": "serial", "label": "🏷️ ภาพถ่ายหมายเลข S/N" },
+        { "key": "asset_plate", "label": "🏛️ ภาพถ่ายสติกเกอร์ครุภัณฑ์" },
+        { "key": "box", "label": "📦 ภาพถ่ายกล่องบรรจุภัณฑ์" },
+        { "key": "accessories", "label": "🔌 ภาพถ่ายอุปกรณ์พ่วงและคู่มือ" }
+      ],
+      "rules": [
+        { "condition": "!item.serial_number", "message": "กรุณากรอกหมายเลข Serial Number" },
+        { "condition": "!item.asset_number", "message": "กรุณากรอกหมายเลขครุภัณฑ์หลวง" }
+      ]
+    },
+    {
+      "id": "office-supplies",
+      "name": "วัสดุสิ้นเปลือง / วัสดุสำนักงาน",
+      "description": "แบบตรวจรับกระดาษ หมึกพิมพ์ ปากกา อะไหล่สำนักงาน หรือวัสดุก่อสร้างสิ้นเปลือง",
+      "version": "1.0",
+      "fields": [
+        {
+          "key": "lot_number",
+          "label": "หมายเลข Lot การผลิต",
+          "type": "text",
+          "required": true,
+          "placeholder": "ระบุ Lot Number ของสินค้า"
+        },
+        {
+          "key": "manufacture_date",
+          "label": "วันผลิต (MFG)",
+          "type": "date",
+          "required": false
+        },
+        {
+          "key": "expiry_date",
+          "label": "วันหมดอายุ (EXP)",
+          "type": "date",
+          "required": true
+        }
+      ],
+      "checklist": [
+        { "id": "qty_matches", "label": "จำนวนแพ็กเกจถูกต้องตรงตามใบส่งสินค้า", "required": true },
+        { "id": "quality_checked", "label": "คุณภาพเนื้อวัสดุได้มาตรฐานตามสเปก", "required": true },
+        { "id": "packaging_intact", "label": "สภาพกล่องบรรจุภัณฑ์ปิดสนิท ไม่มีฉีกขาด/เปียกน้ำ", "required": true },
+        { "id": "expiry_valid", "label": "วันหมดอายุของสินค้าไม่ต่ำกว่า 1 ปีนับจากวันตรวจรับ", "required": true }
+      ],
+      "evidence": [
+        { "key": "product_box", "label": "📦 ภาพถ่ายกล่องบรรจุภัณฑ์รวม" },
+        { "key": "lot_label", "label": "🏷️ ภาพถ่ายป้ายแสดง Lot และวันหมดอายุ" },
+        { "key": "delivery_invoice", "label": "📄 ภาพถ่ายใบส่งของที่ตรวจนับ" }
+      ],
+      "rules": [
+        { "condition": "!item.lot_number", "message": "กรุณากรอกหมายเลข Lot การผลิต" },
+        { "condition": "!item.expiry_date", "message": "กรุณาระบุวันหมดอายุสินค้า" }
+      ]
+    },
+    {
+      "id": "service-maintenance",
+      "name": "งานจ้างบริการบำรุงรักษา / จัดจ้างทั่วไป",
+      "description": "แบบตรวจรับการจ้างเหมาบริการ บำรุงรักษาระบบ ดูแลความสะอาด หรือรปภ.",
+      "version": "1.0",
+      "fields": [
+        {
+          "key": "maintenance_hours",
+          "label": "จำนวนชั่วโมงที่ให้บริการจริง (ชั่วโมง)",
+          "type": "number",
+          "required": true,
+          "placeholder": "ระบุชั่วโมงทำงาน"
+        },
+        {
+          "key": "staff_count",
+          "label": "จำนวนเจ้าหน้าที่ปฏิบัติงาน (คน)",
+          "type": "number",
+          "required": true,
+          "placeholder": "ระบุจำนวนคนปฏิบัติหน้าที่"
+        },
+        {
+          "key": "satisfaction_rating",
+          "label": "คะแนนประเมินความพึงพอใจการให้บริการ (1-5)",
+          "type": "number",
+          "required": false,
+          "placeholder": "ประเมินคะแนนเต็ม 5"
+        }
+      ],
+      "checklist": [
+        { "id": "scope_fulfilled", "label": "ปฏิบัติงานตรงตามขอบเขตงาน (SOW/SLA) ครบถ้วน", "required": true },
+        { "id": "staff_verified", "label": "รายชื่อและประวัติเจ้าหน้าที่ผ่านการอนุมัติก่อนปฏิบัติงาน", "required": true },
+        { "id": "hours_logged", "label": "มีตารางลงเวลาทำงานและใบเช็กชื่อแนบชัดเจน", "required": true },
+        { "id": "report_submitted", "label": "รายงานผลการปฏิบัติงานส่งครบถ้วนตามงวดการจ้าง", "required": true }
+      ],
+      "evidence": [
+        { "key": "service_report", "label": "📄 ไฟล์/ภาพถ่ายรายงานสรุปการทำงาน" },
+        { "key": "attendance_sheet", "label": "📝 ภาพถ่ายใบเซ็นชื่อลงเวลาเข้า-ออกงาน" },
+        { "key": "performance_log", "label": "📈 ตารางบันทึกค่าประสิทธิภาพระบบ/พื้นที่" }
+      ],
+      "rules": [
+        { "condition": "item.maintenance_hours <= 0", "message": "ชั่วโมงการปฏิบัติงานต้องมากกว่า 0" },
+        { "condition": "item.staff_count <= 0", "message": "จำนวนพนักงานปฏิบัติงานต้องมากกว่า 0" }
+      ]
+    },
+    {
+      "id": "construction-milestone",
+      "name": "งานจ้างก่อสร้าง / งวดงาน milestone",
+      "description": "แบบตรวจรับงานสิ่งปลูกสร้าง ปรับปรุงภูมิทัศน์ ติดตั้งโครงสร้างพื้นฐานแยกตามงวดงาน",
+      "version": "1.0",
+      "fields": [
+        {
+          "key": "milestone_index",
+          "label": "งวดงานที่ตรวจรับ (งวดที่)",
+          "type": "number",
+          "required": true,
+          "placeholder": "ระบุตัวเลขงวดงาน เช่น 1, 2"
+        },
+        {
+          "key": "progress_percent",
+          "label": "เปอร์เซ็นต์ความก้าวหน้าหน้างาน (%)",
+          "type": "number",
+          "required": true,
+          "placeholder": "กรอกเปอร์เซ็นต์ความคืบหน้า"
+        },
+        {
+          "key": "boq_verified",
+          "label": "ปริมาณวัสดุก่อสร้างตรงตามบัญชี BOQ",
+          "type": "text",
+          "required": false,
+          "placeholder": "เช่น ปริมาณเสาเข็ม/ยางมะตอยครบ"
+        }
+      ],
+      "checklist": [
+        { "id": "work_matches_blueprint", "label": "ระยะ ขนาด และพื้นที่ก่อสร้างตรงตามแบบแปลน", "required": true },
+        { "id": "material_tests_passed", "label": "มีผลทดสอบวัสดุ (เช่น ความแรงคอนกรีต) รับรอง", "required": true },
+        { "id": "defect_rectified", "label": "ไม่มีข้อบกพร่องตกค้างจากรายงานรอบก่อนหน้า", "required": true },
+        { "id": "site_safety_checked", "label": "มีการจัดการความปลอดภัยหน้างานเรียบร้อย", "required": true }
+      ],
+      "evidence": [
+        { "key": "site_photo_1", "label": "🚧 ภาพถ่ายความก้าวหน้าหน้างาน (มุมกว้าง)" },
+        { "key": "site_photo_2", "label": "🏗️ ภาพถ่ายโครงสร้าง/จุดทดสอบความเข็งแรง" },
+        { "key": "test_cert", "label": "📜 ภาพถ่าย/ไฟล์เอกสารรับรองมาตรฐานวัสดุ" },
+        { "key": "blueprint_copy", "label": "🗺️ ภาพถ่ายแบบแปลนก่อสร้างกำกับลายมือวิศวกร" }
+      ],
+      "rules": [
+        { "condition": "item.progress_percent < 0 || item.progress_percent > 100", "message": "เปอร์เซ็นต์ความก้าวหน้าต้องอยู่ระหว่าง 0-100%" },
+        { "condition": "!item.milestone_index", "message": "กรุณาระบุเลขงวดงานที่ตรวจส่งมอบ" }
+      ]
+    }
+  ]
+}

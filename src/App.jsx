@@ -16,8 +16,11 @@ import {
   Printer,
   AlertTriangle,
   Menu,
-  X
+  X,
+  Settings
 } from 'lucide-react';
+import { inspectionRepository } from './utils/inspectionRepository';
+import TemplateSettings from './components/TemplateSettings';
 
 // Import initial dataset
 import initialProcurementData from './data/procurementData.json';
@@ -79,27 +82,32 @@ export default function App() {
   // Mobile menu drawer state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Project template configuration state
+  const [projectConfig, setProjectConfig] = useState(() => inspectionRepository.getProjectConfig());
+
   // Initial State Loading & URL State Parsing
   useEffect(() => {
-    const cachedCommittee = localStorage.getItem('procurement_committee_v3');
-    let currentCommittee = DEFAULT_COMMITTEE;
-    if (cachedCommittee) {
-      try {
-        currentCommittee = JSON.parse(cachedCommittee);
-      } catch (e) {
-        console.error(e);
+    // 1. Migration from V3 to V4 Adapter
+    const cachedV3Committee = localStorage.getItem('procurement_committee_v3');
+    const cachedV3Items = localStorage.getItem('procurement_items_v3');
+    const cachedV4Items = localStorage.getItem('procurement_items_v4');
+
+    if (!cachedV4Items && (cachedV3Items || cachedV3Committee)) {
+      // Migrate V3 localStorage into V4 Repository
+      if (cachedV3Items) {
+        try {
+          inspectionRepository.saveItems(JSON.parse(cachedV3Items));
+        } catch (e) { console.error('Migration failed for items', e); }
+      }
+      if (cachedV3Committee) {
+        try {
+          inspectionRepository.saveCommittee(JSON.parse(cachedV3Committee));
+        } catch (e) { console.error('Migration failed for committee', e); }
       }
     }
 
-    const cachedItems = localStorage.getItem('procurement_items_v3');
-    let currentItems = initialProcurementData;
-    if (cachedItems) {
-      try {
-        currentItems = JSON.parse(cachedItems);
-      } catch (e) {
-        console.error(e);
-      }
-    }
+    let currentCommittee = inspectionRepository.getCommittee();
+    let currentItems = inspectionRepository.getItems();
 
     // Parse URL Hash state override
     const parsedState = parseUrlState(currentItems);
@@ -149,15 +157,15 @@ export default function App() {
     }, 4000);
   };
 
-  // Cache changes to localStorage
+  // Cache changes to repository
   useEffect(() => {
     if (items.length > 0) {
-      localStorage.setItem('procurement_items_v3', JSON.stringify(items));
+      inspectionRepository.saveItems(items);
     }
   }, [items]);
 
   useEffect(() => {
-    localStorage.setItem('procurement_committee_v3', JSON.stringify(committee));
+    inspectionRepository.saveCommittee(committee);
   }, [committee]);
 
   // Reset pagination to first page when any filters or sorting change
@@ -379,41 +387,9 @@ export default function App() {
   };
 
   const handleResetDatabase = () => {
-    if (window.confirm('⚠️ คำเตือน! คุณต้องการรีเซ็ตข้อมูลและสถานะการตรวจสอบพัสดุทั้งหมดกลับเป็นค่าเริ่มต้นหรือไม่? (ประวัติการแก้ไขจะถูกล้างทิ้ง)')) {
-      const freshItems = initialProcurementData.map(item => ({
-        ...item,
-        images: {
-          product: item.image || "",
-          serial: "",
-          asset_plate: "",
-          box: "",
-          accessories: ""
-        },
-        serial_number: "",
-        mac_address: "",
-        asset_number: "",
-        checklist: {
-          qty_correct: true,
-          model_matches: true,
-          brand_matches: true,
-          serial_recorded: false,
-          physical_condition: true,
-          accessories_complete: true,
-          test_run: true,
-          warranty_checked: true
-        },
-        timeline: { started_at: "", updated_at: "", completed_at: "" },
-        history: [],
-        version: 1,
-        inspectStatus: "passed",
-        notes: ""
-      }));
-      
-      setItems(freshItems);
-      setCommittee(DEFAULT_COMMITTEE);
-      setEditedCommittee(DEFAULT_COMMITTEE);
-      localStorage.removeItem('procurement_items_v3');
-      localStorage.removeItem('procurement_committee_v3');
+    if (window.confirm('🚨 คำเตือน! คุณต้องการรีเซ็ตข้อมูลผลตรวจรับทั้งหมดกลับเป็นค่าเริ่มต้นตามสัญญาเดิมใช่หรือไม่? ข้อมูลประวัติและรูปภาพทั้งหมดจะถูกลบ')) {
+      inspectionRepository.resetAll();
+      setItems(initialProcurementData);
       window.location.hash = ''; // Clear hash URL
       showToast('🔄 รีเซ็ตฐานข้อมูลการตรวจรับกลับเป็นค่าเริ่มต้นเรียบร้อย');
     }
@@ -421,9 +397,15 @@ export default function App() {
 
   const handleImportExcel = (newItems) => {
     setItems(newItems);
-    localStorage.setItem('procurement_items_v3', JSON.stringify(newItems));
+    inspectionRepository.saveItems(newItems);
     showToast(`🟢 นำเข้าสเปกพัสดุ ${newItems.length} รายการเรียบร้อย`);
     setActiveTab('items');
+  };
+
+  const handleProjectConfigChange = (newConfig) => {
+    setProjectConfig(newConfig);
+    // Reload items dynamically based on the newly saved states in repository
+    setItems(inspectionRepository.getItems());
   };
 
   const handleExportJSON = () => {
@@ -559,6 +541,19 @@ export default function App() {
             <BookOpen className="w-4 h-4 shrink-0 text-gov-gold" />
             คู่มือแนะนำการใช้งาน
           </button>
+
+          <button
+            onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
+              activeTab === 'settings' 
+                ? 'bg-gov-gold text-gov-navy shadow-sm' 
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
+            }`}
+            title="ตั้งค่าแบบตรวจรับพัสดุและออกแบบแม่แบบแบบตรวจรับอื่นๆ"
+          >
+            <Settings className="w-4 h-4 shrink-0" />
+            ตั้งค่าแบบตรวจรับ
+          </button>
         </nav>
 
         {/* Sidebar Footer options */}
@@ -601,6 +596,7 @@ export default function App() {
               {activeTab === 'report' && 'ระบบออกรายงานและหนังสือส่งมอบอย่างเป็นทางการ'}
               {activeTab === 'importer' && 'เครื่องมือนำเข้าใบเสนอราคาพลวัต (Excel Importer)'}
               {activeTab === 'manual' && '📖 คู่มือแนะแนวการใช้งานสำหรับเจ้าหน้าที่จัดซื้อตรวจรับ'}
+              {activeTab === 'settings' && '⚙️ ตั้งค่าแม่แบบและกฎการตรวจรับพัสดุ'}
             </h2>
           </div>
           
@@ -1034,6 +1030,11 @@ export default function App() {
               </div>
 
             </div>
+          )}
+
+          {/* Tab 6: Template Settings Panel */}
+          {activeTab === 'settings' && (
+            <TemplateSettings onConfigChange={handleProjectConfigChange} />
           )}
 
         </div>
