@@ -787,7 +787,8 @@ export default function App() {
                             {paginatedItems.map(item => (
                               <tr 
                                 key={item.id} 
-                                className="border-b border-slate-100 hover:bg-slate-50 transition-colors font-medium"
+                                onClick={() => setSelectedItem(item)}
+                                className="border-b border-slate-100 hover:bg-slate-50 transition-colors font-medium cursor-pointer"
                               >
                                 <td className="p-3 font-bold text-center text-gov-gold num-tabular">#{item.id}</td>
                                 <td className="p-3 text-gov-navy font-bold pl-2 truncate max-w-[320px]" title={item.name}>{item.name}</td>

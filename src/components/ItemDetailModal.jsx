@@ -263,6 +263,10 @@ export default function ItemDetailModal({ item, onSave, onClose }) {
     template.id === 'it-computer' ? 'simulation' : (template.evidence[0]?.key || '')
   );
 
+  // Compute required checklists status in component scope
+  const requiredCheckDefs = template.checklist.filter(c => c.required);
+  const allRequiredChecked = requiredCheckDefs.every(c => checklist[c.id] === true);
+
   const handleChecklistChange = (id, checked) => {
     setChecklist(prev => ({ ...prev, [id]: checked }));
   };
@@ -328,12 +332,8 @@ export default function ItemDetailModal({ item, onSave, onClose }) {
   };
 
   const handleSave = () => {
-    // Check required checklists
-    const requiredCheckDefs = template.checklist.filter(c => c.required);
-    const allRequiredChecked = requiredCheckDefs.every(c => checklist[c.id] === true);
-
     if (inspectStatus === 'passed' && !allRequiredChecked) {
-      alert(`⚠️ ไม่สามารถให้ความเห็นผ่านตรวจรับพัสดุได้! คณะกรรมการต้องทำเครื่องหมายในเช็คลิสต์ที่จำเป็นครบทั้ง ${requiredCheckDefs.length} ข้อก่อน`);
+      alert(`⚠️ ไม่สามารถให้ความเห็นผ่านตรวจรับพัสดุได้! คณะกรรมการต้องทำเครื่องหมายในเช็คลิสต์ที่จำเป็นครบก่อน`);
       return;
     }
 
