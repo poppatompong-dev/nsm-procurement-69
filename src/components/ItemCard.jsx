@@ -13,7 +13,7 @@ import { formatNumber } from '../utils/numberFormatter';
 
 export default function ItemCard({ item, onClick }) {
   const imageSrc = item.images?.product 
-    ? `./รูปภาพ/${item.images.product}` 
+    ? (item.images.product.startsWith('data:') ? item.images.product : `./รูปภาพ/${item.images.product}`)
     : null;
 
   const getCategoryLabel = (c) => {
