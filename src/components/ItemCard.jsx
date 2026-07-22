@@ -1,21 +1,19 @@
 import React from 'react';
 import { 
   CheckCircle2, 
-  Clock3, 
   XCircle, 
-  MessageSquareCode, 
+  Clock, 
+  MessageSquare, 
   MapPin, 
-  Layers,
-  Image as ImageIcon,
-  Tag
+  Layers
 } from 'lucide-react';
 import { formatNumber } from '../utils/numberFormatter';
 import CategoryMockup from './CategoryMockup';
 
-export default function ItemCard({ item, onClick }) {
+export default function ItemCard({ item, onClick, onStatusChange }) {
   const imageSrc = item.images?.product 
     ? (item.images.product.startsWith('data:') ? item.images.product : `./รูปภาพ/${item.images.product}`)
-    : null;
+    : (item.image ? (item.image.startsWith('data:') ? item.image : (item.image.startsWith('/') ? item.image : `./${item.image}`)) : null);
 
   const getCategoryLabel = (c) => {
     switch (c) {
@@ -27,26 +25,38 @@ export default function ItemCard({ item, onClick }) {
       case 'organization': return '📁 จัดระเบียบ';
       case 'toner': return '🖨️ หมึกพิมพ์';
       case 'consumables': return '🔋 อะไหล่สิ้นเปลือง';
-      default: return c;
+      default: return c || 'ทั่วไป';
+    }
+  };
+
+  const handleStatusClick = (e, newStatus) => {
+    e.stopPropagation(); // Prevent opening modal when clicking quick status toggle
+    if (onStatusChange) {
+      onStatusChange(item.id, newStatus);
     }
   };
 
   return (
     <div 
-      onClick={onClick}
-      className="premium-3d-card bg-white rounded-2xl shadow-premium border border-slate-100 cursor-pointer flex flex-col justify-between overflow-hidden relative group"
+      className={`bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 border ${
+        item.inspectStatus === 'passed' ? 'border-emerald-200' :
+        item.inspectStatus === 'failed' ? 'border-rose-200' : 'border-slate-200'
+      } flex flex-col justify-between overflow-hidden relative group`}
     >
-      {/* Visual indicator left strip */}
-      <span className={`absolute left-0 top-0 bottom-0 w-1.5 ${
-        item.inspectStatus === 'passed' ? 'bg-[#065f46]' :
-        item.inspectStatus === 'failed' ? 'bg-[#991b1b]' : 'bg-amber-400'
-      }`}></span>
+      {/* Status top indicator accent */}
+      <div className={`h-1.5 w-full ${
+        item.inspectStatus === 'passed' ? 'bg-emerald-600' :
+        item.inspectStatus === 'failed' ? 'bg-rose-600' : 'bg-amber-400'
+      }`}></div>
 
-      {/* Card Content Body */}
-      <div className="p-5 flex gap-4 items-start pl-6 premium-3d-card-inner">
+      {/* Main Content Area */}
+      <div 
+        onClick={onClick}
+        className="p-5 flex flex-col sm:flex-row gap-4 items-start cursor-pointer hover:bg-slate-50/50 transition-colors"
+      >
         
-        {/* Left Thumbnail with high-end glass style */}
-        <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden relative group-hover:scale-[1.02] transition-transform duration-300 shadow-inner">
+        {/* Large Item Photo Thumbnail */}
+        <div className="w-full sm:w-28 h-32 sm:h-28 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden relative group-hover:scale-[1.02] transition-transform duration-300 shadow-inner">
           {imageSrc ? (
             <img 
               src={imageSrc} 
@@ -56,44 +66,51 @@ export default function ItemCard({ item, onClick }) {
               onError={(e) => { e.target.style.display = 'none'; }}
             />
           ) : (
-            <CategoryMockup category={item.category} size="medium" />
+            <CategoryMockup category={item.category} size="large" />
           )}
+          <span className="absolute bottom-1.5 left-1.5 bg-black/70 text-white font-bold text-xs px-2 py-0.5 rounded backdrop-blur-xs">
+            #{item.id}
+          </span>
         </div>
 
-        {/* Right Info Section */}
-        <div className="space-y-2 flex-1 min-w-0">
+        {/* Info & Spec Section */}
+        <div className="space-y-2 flex-1 min-w-0 w-full">
           
-          {/* Badge Rows */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="bg-gov-gold-light text-gov-gold font-bold text-[9px] px-2 py-0.5 rounded border border-gov-gold/15">
-              ID {item.id}
-            </span>
-            <span className="bg-slate-50 border border-slate-200/50 text-neutral-slate font-bold text-[9px] px-2 py-0.5 rounded flex items-center gap-1">
-              <Layers className="w-2.5 h-2.5 text-gov-gold" />
+          {/* Badge Row */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="bg-slate-100 text-slate-700 font-bold text-xs px-2.5 py-1 rounded-lg border border-slate-200 flex items-center gap-1">
+              <Layers className="w-3.5 h-3.5 text-slate-500" />
               {getCategoryLabel(item.category)}
             </span>
-            <span className="bg-slate-50 border border-slate-200/50 text-neutral-slate font-bold text-[9px] px-2 py-0.5 rounded flex items-center gap-1">
-              <MapPin className="w-2.5 h-2.5 text-gov-blue" />
-              {item.division}
+            <span className="bg-slate-100 text-slate-700 font-bold text-xs px-2.5 py-1 rounded-lg border border-slate-200 flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5 text-slate-500" />
+              กลุ่มงาน {item.division}
             </span>
           </div>
 
           {/* Item Name */}
-          <h4 className="text-xs sm:text-sm font-bold text-gov-navy line-clamp-2 leading-relaxed" title={item.name}>
+          <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug line-clamp-2" title={item.name}>
             {item.name}
-          </h4>
+          </h3>
 
-          {/* Price details */}
-          <div className="flex items-baseline justify-between pt-1">
-            <div>
-              <span className="text-[9px] font-bold text-neutral-slate uppercase tracking-wider">มูลค่าจัดซื้อ: </span>
-              <span className="text-xs sm:text-sm font-black text-gov-navy num-tabular">
-                {formatNumber(item.qty * item.unit_price)} <span className="text-[10px] font-medium text-neutral-slate">บาท</span>
+          {/* Spec snippet */}
+          {item.spec && (
+            <p className="text-xs sm:text-sm text-slate-600 line-clamp-2 leading-relaxed font-normal">
+              {item.spec}
+            </p>
+          )}
+
+          {/* Quantity & Pricing */}
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-slate-900 bg-slate-100 px-3 py-1 rounded-lg border border-slate-200">
+                จำนวน {item.qty} {item.unit}
               </span>
             </div>
             <div className="text-right">
-              <span className="text-[10px] font-bold text-neutral-charcoal bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-lg">
-                {item.qty} {item.unit}
+              <span className="text-xs text-slate-500 block">มูลค่ารวม</span>
+              <span className="text-base sm:text-lg font-black text-slate-900 num-tabular">
+                {formatNumber(item.qty * item.unit_price)} <span className="text-xs font-normal text-slate-500">บาท</span>
               </span>
             </div>
           </div>
@@ -102,45 +119,69 @@ export default function ItemCard({ item, onClick }) {
 
       </div>
 
-      {/* Footer status bar */}
-      <div className="px-5 py-3 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between pl-6">
+      {/* Quick Status Action Bar */}
+      <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
         
-        {/* Status badges */}
-        <div className="flex items-center gap-1.5">
-          {item.inspectStatus === 'passed' ? (
-            <span className="text-status-passed flex items-center gap-1 text-[11px] font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-status-passed"></span>
-              ผ่านการตรวจรับ
-            </span>
-          ) : item.inspectStatus === 'failed' ? (
-            <span className="text-status-failed flex items-center gap-1 text-[11px] font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-status-failed"></span>
-              ไม่ผ่านเกณฑ์
-            </span>
-          ) : (
-            <span className="text-status-pending flex items-center gap-1 text-[11px] font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-              อยู่ระหว่างตรวจ
-            </span>
-          )}
-        </div>
+        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+          ผลการตรวจรับ:
+        </span>
 
-        {/* Note indicators */}
-        <div className="flex items-center gap-2">
-          {item.serial_number && (
-            <span className="bg-slate-100 text-slate-500 font-bold text-[8px] px-1.5 py-0.5 rounded border border-slate-200/40 flex items-center gap-0.5">
-              <Tag className="w-2.5 h-2.5 text-gov-gold" />
-              S/N
-            </span>
-          )}
-          {item.notes && (
-            <span className="text-neutral-slate hover:text-gov-navy transition-colors flex items-center" title={item.notes}>
-              <MessageSquareCode className="w-4 h-4 text-gov-gold" />
-            </span>
-          )}
+        {/* 1-Click Pass / Fail / Pending Toggles */}
+        <div className="flex items-center gap-1.5">
+          
+          <button
+            type="button"
+            onClick={(e) => handleStatusClick(e, 'passed')}
+            className={`px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1.5 border ${
+              item.inspectStatus === 'passed'
+                ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm font-black scale-105'
+                : 'bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50'
+            }`}
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            ผ่าน
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => handleStatusClick(e, 'failed')}
+            className={`px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1.5 border ${
+              item.inspectStatus === 'failed'
+                ? 'bg-rose-600 text-white border-rose-700 shadow-sm font-black scale-105'
+                : 'bg-white text-rose-700 border-rose-300 hover:bg-rose-50'
+            }`}
+          >
+            <XCircle className="w-4 h-4" />
+            ไม่ผ่าน
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => handleStatusClick(e, 'pending')}
+            className={`px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1.5 border ${
+              item.inspectStatus === 'pending' || !item.inspectStatus
+                ? 'bg-amber-500 text-white border-amber-600 shadow-sm font-black scale-105'
+                : 'bg-white text-amber-700 border-amber-300 hover:bg-amber-50'
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            รอตรวจ
+          </button>
+
         </div>
 
       </div>
+
+      {/* Inspection Note Bar (If notes exist) */}
+      {item.notes && (
+        <div 
+          onClick={onClick}
+          className="px-5 py-2.5 bg-amber-50 border-t border-amber-200/60 text-xs sm:text-sm text-amber-900 font-medium flex items-center gap-2 cursor-pointer hover:bg-amber-100/60 transition-colors"
+        >
+          <MessageSquare className="w-4 h-4 text-amber-600 shrink-0" />
+          <span className="truncate"><strong>หมายเหตุ:</strong> {item.notes}</span>
+        </div>
+      )}
 
     </div>
   );

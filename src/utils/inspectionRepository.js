@@ -22,6 +22,58 @@ const DEFAULT_PROJECT_CONFIG = {
   workflowState: 'inspecting'
 };
 
+export const MAPPING_FIXES = {
+  1: "87202_0.jpg",
+  2: "87201_0.jpg",
+  3: "87200_0.jpg",
+  4: "87199_0.jpg",
+  5: "87198_0.jpg",
+  6: "87196_0.jpg",
+  7: "87195_0.jpg",
+  8: "87194_0.jpg",
+  9: "87193_0.jpg",
+  10: "87192_0.jpg",
+  11: "87191_0.jpg",
+  12: "87190_0.jpg",
+  13: "87189_0.jpg",
+  14: "87188_0.jpg",
+  15: "87187_0.jpg",
+  16: "87200_0.jpg",
+  17: "87186_0.jpg",
+  18: "87185_0.jpg",
+  19: "87183_0.jpg",
+  20: "87184_0.jpg",
+  21: "87182_0.jpg",
+  22: "87181_0.jpg",
+  23: "87180_0.jpg",
+  24: "87179_0.jpg",
+  25: "87178_0.jpg",
+  26: "87177_0.jpg",
+  27: "87176_0.jpg",
+  28: "87175_0.jpg",
+  29: "87174_0.jpg",
+  30: "87173_0.jpg",
+  31: "87172_0.jpg",
+  32: "87171_0.jpg",
+  33: "87170_0.jpg",
+  34: "87169_0.jpg",
+  35: "87168_0.jpg",
+  36: "87167_0.jpg",
+  37: "87166_0.jpg",
+  38: "87165_0.jpg",
+  39: "87164_0.jpg",
+  40: "87163_0.jpg",
+  41: "87163_0.jpg",
+  42: "87165_0.jpg",
+  43: "8854E90E-F50F-4925-B7F3-58786B02BFEB.jpg",
+  44: "87161_0.jpg",
+  45: "87162_0.jpg",
+  46: "336724_0.jpg",
+  47: "336724_0.jpg",
+  48: "336724_0.jpg",
+  49: "87203_0.jpg"
+};
+
 // Per-project storage keys are namespaced off the existing v4 keys so a single project's
 // data shape stays identical to before -- only the wrapper (which project it belongs to) is new.
 const projectItemsKey = (id) => `${STORAGE_KEYS.ITEMS}__${id}`;
@@ -343,11 +395,53 @@ export const inspectionRepository = {
     const pid = projectId || inspectionRepository.getActiveProjectId();
     try {
       const itemsJson = pid ? localStorage.getItem(projectItemsKey(pid)) : null;
-      if (itemsJson) return JSON.parse(itemsJson);
+      if (itemsJson) {
+        const loadedItems = JSON.parse(itemsJson);
+        // Auto-heal missing or duplicate images if items have legacy empty/duplicate values
+        let healed = false;
+        const result = loadedItems.map(item => {
+          if (MAPPING_FIXES[item.id] && (!item.image || item.image === '' || (item.id === 41 && item.image === '87163_0.jpg') || (item.id === 42 && !item.image))) {
+            healed = true;
+            const targetImg = MAPPING_FIXES[item.id];
+            return {
+              ...item,
+              image: targetImg,
+              images: { ...(item.images || {}), product: targetImg }
+            };
+          }
+          return item;
+        });
+        if (healed) {
+          inspectionRepository.saveItems(result, pid);
+        }
+        return result;
+      }
     } catch (e) {
       console.error('Failed to load items from localStorage', e);
     }
     return fallbackData;
+  },
+
+  /**
+   * Auto-match 100% of images for all 49 items
+   */
+  autoMatchAllImages: (items, projectId = null) => {
+    const updated = items.map(item => {
+      const targetImg = MAPPING_FIXES[item.id];
+      if (targetImg) {
+        return {
+          ...item,
+          image: targetImg,
+          images: {
+            ...(item.images || {}),
+            product: targetImg
+          }
+        };
+      }
+      return item;
+    });
+    inspectionRepository.saveItems(updated, projectId);
+    return updated;
   },
 
   /**
