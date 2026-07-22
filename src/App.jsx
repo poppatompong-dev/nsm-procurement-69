@@ -17,10 +17,14 @@ import {
   AlertTriangle,
   Menu,
   X,
-  Settings
+  Settings,
+  FolderKanban,
+  Activity
 } from 'lucide-react';
 import { inspectionRepository } from './utils/inspectionRepository';
 import TemplateSettings from './components/TemplateSettings';
+import ProjectManager from './components/ProjectManager';
+import ActivityLog from './components/ActivityLog';
 
 // Import initial dataset
 import initialProcurementData from './data/procurementData.json';
@@ -82,43 +86,64 @@ export default function App() {
   // Mobile menu drawer state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Project template configuration state
-  const [projectConfig, setProjectConfig] = useState(() => inspectionRepository.getProjectConfig());
+  // Active project & template configuration state.
+  // Both start null/empty and are only populated for real inside the boot useEffect,
+  // AFTER migrateToMultiProject() has run -- reading them lazily here would race the
+  // migration and could seed the default project from stale pre-migration data.
+  const [activeProjectId, setActiveProjectId] = useState(null);
+  const [projectConfig, setProjectConfig] = useState(null);
 
   // Initial State Loading & URL State Parsing
   useEffect(() => {
-    // 1. Migration from V3 to V4 Adapter
+    // 1. Migration from V3 to V4 Adapter -- writes directly to the legacy v4 keys since
+    // inspectionRepository's save functions are project-scoped and there is no active
+    // project yet at this point.
     const cachedV3Committee = localStorage.getItem('procurement_committee_v3');
     const cachedV3Items = localStorage.getItem('procurement_items_v3');
     const cachedV4Items = localStorage.getItem('procurement_items_v4');
 
     if (!cachedV4Items && (cachedV3Items || cachedV3Committee)) {
-      // Migrate V3 localStorage into V4 Repository
+      // Migrate V3 localStorage into V4 shape
       if (cachedV3Items) {
         try {
-          inspectionRepository.saveItems(JSON.parse(cachedV3Items));
+          localStorage.setItem('procurement_items_v4', JSON.stringify(JSON.parse(cachedV3Items)));
         } catch (e) { console.error('Migration failed for items', e); }
       }
       if (cachedV3Committee) {
         try {
-          inspectionRepository.saveCommittee(JSON.parse(cachedV3Committee));
+          localStorage.setItem('procurement_committee_v4', JSON.stringify(JSON.parse(cachedV3Committee)));
         } catch (e) { console.error('Migration failed for committee', e); }
       }
     }
 
-    let currentCommittee = inspectionRepository.getCommittee();
-    let currentItems = inspectionRepository.getItems();
+    // 2. Migration from V4 (single global dataset) to Projects v1 (multi-project registry)
+    inspectionRepository.migrateToMultiProject();
+    const pid = inspectionRepository.getActiveProjectId();
+    setActiveProjectId(pid);
+    setProjectConfig(inspectionRepository.getProjectConfig(pid));
+
+    let currentCommittee = inspectionRepository.getCommittee(pid);
+    let currentItems = inspectionRepository.getItems(initialProcurementData, pid);
 
     // Parse URL Hash state override
     const parsedState = parseUrlState(currentItems);
     if (parsedState) {
+      // A share link carries the project it was generated from; if it doesn't match the
+      // project currently open, restore UI-only state but skip merging in mismatched data.
+      const crossProject = parsedState.sourceProjectId && parsedState.sourceProjectId !== pid;
+      if (crossProject) {
+        parsedState.committee = undefined;
+        parsedState.items = undefined;
+        parsedState.selectedItemId = undefined;
+      }
+
       if (parsedState.committee) {
         currentCommittee = parsedState.committee;
       }
       if (parsedState.items) {
         currentItems = parsedState.items;
       }
-      
+
       // Restore UI states
       if (parsedState.activeTab) {
         setTimeout(() => setActiveTab(parsedState.activeTab), 50);
@@ -135,14 +160,19 @@ export default function App() {
       if (parsedState.maxPrice) setMaxPrice(parsedState.maxPrice);
       if (parsedState.currentPage) setCurrentPage(parsedState.currentPage);
       if (parsedState.pageSize) setPageSize(parsedState.pageSize);
-      
+
       if (parsedState.selectedItemId) {
         const found = currentItems.find(i => i.id === parsedState.selectedItemId);
         if (found) {
           setTimeout(() => setSelectedItem(found), 100);
         }
       }
-      showToast('🟢 โหลดผลการตรวจและตัวกรองล่าสุดเรียบร้อย');
+
+      if (crossProject) {
+        showToast(`⚠️ ลิงก์นี้มาจากโครงการ "${parsedState.sourceProjectName || 'อื่น'}" ไม่ตรงกับโครงการที่เปิดอยู่ ระบบจะไม่นำผลตรวจมาผสาน`);
+      } else {
+        showToast('🟢 โหลดผลการตรวจและตัวกรองล่าสุดเรียบร้อย');
+      }
     }
 
     setCommittee(currentCommittee);
@@ -157,16 +187,18 @@ export default function App() {
     }, 4000);
   };
 
-  // Cache changes to repository
+  // Cache changes to repository (scoped to the active project)
   useEffect(() => {
-    if (items.length > 0) {
-      inspectionRepository.saveItems(items);
+    if (activeProjectId && items.length > 0) {
+      inspectionRepository.saveItems(items, activeProjectId);
     }
-  }, [items]);
+  }, [items, activeProjectId]);
 
   useEffect(() => {
-    inspectionRepository.saveCommittee(committee);
-  }, [committee]);
+    if (activeProjectId) {
+      inspectionRepository.saveCommittee(committee, activeProjectId);
+    }
+  }, [committee, activeProjectId]);
 
   // Reset pagination to first page when any filters or sorting change
   useEffect(() => {
@@ -377,7 +409,7 @@ export default function App() {
         pageSize,
         selectedItemId: selectedItem ? selectedItem.id : null
       };
-      const link = generateShareLink(committee, items, uiState);
+      const link = generateShareLink(committee, items, uiState, { id: activeProjectId, name: projectConfig?.projectTitle });
       return link;
     } catch (e) {
       console.error(e);
@@ -387,17 +419,22 @@ export default function App() {
   };
 
   const handleResetDatabase = () => {
-    if (window.confirm('🚨 คำเตือน! คุณต้องการรีเซ็ตข้อมูลผลตรวจรับทั้งหมดกลับเป็นค่าเริ่มต้นตามสัญญาเดิมใช่หรือไม่? ข้อมูลประวัติและรูปภาพทั้งหมดจะถูกลบ')) {
-      inspectionRepository.resetAll();
-      setItems(initialProcurementData);
+    if (window.confirm('🚨 คำเตือน! คุณต้องการรีเซ็ตข้อมูลผลตรวจรับทั้งหมดของโครงการนี้กลับเป็นค่าเริ่มต้นใช่หรือไม่? ข้อมูลประวัติและรูปภาพทั้งหมดจะถูกลบ')) {
+      inspectionRepository.resetAll(activeProjectId);
+      // Only the original legacy project reseeds the real contract data -- any other
+      // (new/cloned) project resets to an empty item list instead.
+      const meta = inspectionRepository.getProjectMeta(activeProjectId);
+      setItems(meta?.isLegacyDefault ? initialProcurementData : []);
       window.location.hash = ''; // Clear hash URL
-      showToast('🔄 รีเซ็ตฐานข้อมูลการตรวจรับกลับเป็นค่าเริ่มต้นเรียบร้อย');
+      inspectionRepository.logProjectEvent(activeProjectId, { type: 'reset', message: 'รีเซ็ตฐานข้อมูลการตรวจรับกลับเป็นค่าเริ่มต้น' });
+      showToast('🔄 รีเซ็ตฐานข้อมูลการตรวจรับของโครงการนี้กลับเป็นค่าเริ่มต้นเรียบร้อย');
     }
   };
 
   const handleImportExcel = (newItems) => {
     setItems(newItems);
-    inspectionRepository.saveItems(newItems);
+    inspectionRepository.saveItems(newItems, activeProjectId);
+    inspectionRepository.logProjectEvent(activeProjectId, { type: 'excel_import', message: `นำเข้าสเปกพัสดุจาก Excel จำนวน ${newItems.length} รายการ` });
     showToast(`🟢 นำเข้าสเปกพัสดุ ${newItems.length} รายการเรียบร้อย`);
     setActiveTab('items');
   };
@@ -405,7 +442,41 @@ export default function App() {
   const handleProjectConfigChange = (newConfig) => {
     setProjectConfig(newConfig);
     // Reload items dynamically based on the newly saved states in repository
-    setItems(inspectionRepository.getItems());
+    setItems(inspectionRepository.getItems(initialProcurementData, activeProjectId));
+  };
+
+  // Switch which project is active: reload its data and clear any transient UI state
+  // left over from the previous project (filters, selection, pagination, share hash).
+  const handleSwitchProject = (newProjectId) => {
+    if (!newProjectId || newProjectId === activeProjectId) return;
+
+    inspectionRepository.setActiveProjectId(newProjectId);
+    setActiveProjectId(newProjectId);
+    setProjectConfig(inspectionRepository.getProjectConfig(newProjectId));
+
+    const newCommittee = inspectionRepository.getCommittee(newProjectId);
+    const newItems = inspectionRepository.getItems(initialProcurementData, newProjectId);
+    setCommittee(newCommittee);
+    setEditedCommittee(newCommittee);
+    setItems(newItems);
+
+    setSelectedItem(null);
+    setSearchQuery('');
+    setCategoryFilter('all');
+    setDivisionFilter('all');
+    setStatusFilter('all');
+    setHasNotesFilter('all');
+    setHasImageFilter('all');
+    setMinPrice('');
+    setMaxPrice('');
+    setSortBy('id-asc');
+    setViewMode('grid');
+    setCurrentPage(1);
+    window.location.hash = '';
+
+    const meta = inspectionRepository.getProjectMeta(newProjectId);
+    inspectionRepository.logProjectEvent(newProjectId, { type: 'switch', message: 'สลับมาทำงานที่โครงการนี้' });
+    showToast(`📁 สลับไปทำงานที่โครงการ "${meta?.name || ''}" เรียบร้อย`);
   };
 
   const handleExportJSON = () => {
@@ -439,6 +510,7 @@ export default function App() {
   };
 
   const handlePrint = () => {
+    inspectionRepository.logProjectEvent(activeProjectId, { type: 'print', message: 'สั่งพิมพ์รายงานทางการของโครงการ' });
     window.print();
   };
 
@@ -458,6 +530,11 @@ export default function App() {
             <div className="space-y-0.5 lg:space-y-1 text-left lg:text-center">
               <h1 className="text-xs sm:text-sm font-black tracking-wider lg:tracking-widest uppercase text-slate-100">เทศบาลนครนครสวรรค์</h1>
               <p className="text-[9px] text-gov-gold font-bold uppercase tracking-widest">ระบบดิจิทัลตรวจรับพัสดุ</p>
+              {projectConfig?.projectTitle && (
+                <p className="text-[8px] text-slate-400 font-semibold truncate max-w-[160px] lg:max-w-[180px]" title={projectConfig.projectTitle}>
+                  📁 {projectConfig.projectTitle}
+                </p>
+              )}
             </div>
           </div>
           
@@ -530,6 +607,32 @@ export default function App() {
           </button>
 
           <button
+            onClick={() => { setActiveTab('projects'); setIsMobileMenuOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
+              activeTab === 'projects'
+                ? 'bg-gov-gold text-gov-navy shadow-sm'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
+            }`}
+            title="สร้าง โคลน หรือสลับโครงการตรวจรับสำหรับรอบการตรวจถัดไป"
+          >
+            <FolderKanban className="w-4 h-4 shrink-0" />
+            จัดการโครงการ
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('activity'); setIsMobileMenuOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
+              activeTab === 'activity'
+                ? 'bg-gov-gold text-gov-navy shadow-sm'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
+            }`}
+            title="ดูประวัติกิจกรรมทั้งหมดของโครงการและรายการพัสดุ (Audit Trail)"
+          >
+            <Activity className="w-4 h-4 shrink-0" />
+            ประวัติกิจกรรม
+          </button>
+
+          <button
             onClick={() => { setActiveTab('manual'); setIsMobileMenuOpen(false); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
               activeTab === 'manual' 
@@ -595,6 +698,8 @@ export default function App() {
               {activeTab === 'items' && 'ระบบตรวจทานพัสดุและภาพถ่ายหลักฐาน'}
               {activeTab === 'report' && 'ระบบออกรายงานและหนังสือส่งมอบอย่างเป็นทางการ'}
               {activeTab === 'importer' && 'เครื่องมือนำเข้าใบเสนอราคาพลวัต (Excel Importer)'}
+              {activeTab === 'projects' && '📁 จัดการหลายโครงการตรวจรับและโคลนโครงการสำหรับรอบถัดไป'}
+              {activeTab === 'activity' && '🕒 ประวัติกิจกรรมและ Audit Trail ของโครงการ'}
               {activeTab === 'manual' && '📖 คู่มือแนะแนวการใช้งานสำหรับเจ้าหน้าที่จัดซื้อตรวจรับ'}
               {activeTab === 'settings' && '⚙️ ตั้งค่าแม่แบบและกฎการตรวจรับพัสดุ'}
             </h2>
@@ -947,6 +1052,21 @@ export default function App() {
             <ExcelImporter onImport={handleImportExcel} />
           )}
 
+          {/* Tab 4b: Project Manager Panel (create / clone / switch / export / import projects) */}
+          {activeTab === 'projects' && (
+            <ProjectManager
+              activeProjectId={activeProjectId}
+              onSwitchProject={handleSwitchProject}
+              onProjectCreated={(id) => { handleSwitchProject(id); setActiveTab('importer'); }}
+              key={activeProjectId}
+            />
+          )}
+
+          {/* Tab 4c: Activity Log Panel (project + item level audit trail) */}
+          {activeTab === 'activity' && (
+            <ActivityLog activeProjectId={activeProjectId} key={activeProjectId} />
+          )}
+
           {/* Tab 5: Built-in User Manual */}
           {activeTab === 'manual' && (
             <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
@@ -1035,7 +1155,7 @@ export default function App() {
 
           {/* Tab 6: Template Settings Panel */}
           {activeTab === 'settings' && (
-            <TemplateSettings onConfigChange={handleProjectConfigChange} />
+            <TemplateSettings onConfigChange={handleProjectConfigChange} activeProjectId={activeProjectId} key={activeProjectId} />
           )}
 
         </div>

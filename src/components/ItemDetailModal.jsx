@@ -339,7 +339,7 @@ export default function ItemDetailModal({ item, onSave, onClose }) {
 
     const history = [...(item.history || [])];
     const timestamp = new Date().toISOString();
-    const currentUser = committee[1]?.name || 'กรรมการตรวจรับ';
+    const currentUser = inspectionRepository.getCurrentActor();
 
     const logChange = (action, field, oldVal, newVal) => {
       if (oldVal !== newVal) {
@@ -356,10 +356,62 @@ export default function ItemDetailModal({ item, onSave, onClose }) {
 
     logChange('เปลี่ยนสถานะตรวจรับ', 'inspectStatus', item.inspectStatus, inspectStatus);
     logChange('แก้ไขหมายเหตุ', 'notes', item.notes, notes);
-    
+
     // Log dynamic fields changes
     template.fields.forEach(f => {
       logChange(`อัปเดต ${f.label}`, f.key, item[f.key], formValues[f.key]);
+    });
+
+    // Log checklist changes (booleans -> friendly labels, not raw true/false)
+    const boolLabel = (v) => (v ? 'ทำเครื่องหมายแล้ว' : 'ยังไม่ได้ทำเครื่องหมาย');
+    template.checklist.forEach(chk => {
+      const oldVal = item.checklist ? item.checklist[chk.id] : false;
+      const newVal = checklist[chk.id];
+      if (Boolean(oldVal) !== Boolean(newVal)) {
+        history.push({
+          timestamp,
+          user: currentUser,
+          action: 'ปรับปรุงเช็คลิสต์',
+          field: chk.label,
+          old_value: boolLabel(oldVal),
+          new_value: boolLabel(newVal)
+        });
+      }
+    });
+
+    // Log evidence photo changes -- never store the raw base64 data in the log,
+    // only whether a photo was added/replaced/removed.
+    template.evidence.forEach(ev => {
+      const oldHasImage = Boolean(item.images && item.images[ev.key]);
+      const newHasImage = Boolean(images[ev.key]);
+      const oldValue = item.images ? item.images[ev.key] : '';
+      const newValue = images[ev.key];
+      if (oldValue !== newValue) {
+        history.push({
+          timestamp,
+          user: currentUser,
+          action: 'อัปโหลดรูปหลักฐาน',
+          field: ev.label,
+          old_value: oldHasImage ? 'มีรูปอยู่แล้ว' : 'ยังไม่มีรูป',
+          new_value: newHasImage ? 'อัปโหลดรูปใหม่แล้ว' : 'ลบรูปออก'
+        });
+      }
+    });
+
+    // Log defect/issue additions, status changes, and removals
+    const oldIssues = item.issues || [];
+    issues.forEach(iss => {
+      const old = oldIssues.find(o => o.id === iss.id);
+      if (!old) {
+        history.push({ timestamp, user: currentUser, action: 'แจ้งปัญหาใหม่', field: iss.title, old_value: '', new_value: `ระดับ: ${iss.severity}` });
+      } else if (old.status !== iss.status) {
+        history.push({ timestamp, user: currentUser, action: 'อัปเดตสถานะข้อบกพร่อง', field: iss.title, old_value: old.status, new_value: iss.status });
+      }
+    });
+    oldIssues.forEach(old => {
+      if (!issues.some(iss => iss.id === old.id)) {
+        history.push({ timestamp, user: currentUser, action: 'ลบรายงานข้อบกพร่อง', field: old.title, old_value: old.status, new_value: '' });
+      }
     });
 
     const timeline = { ...item.timeline };

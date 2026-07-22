@@ -13,11 +13,11 @@ import {
 } from 'lucide-react';
 import { inspectionRepository } from '../utils/inspectionRepository';
 
-export default function TemplateSettings({ onConfigChange }) {
+export default function TemplateSettings({ onConfigChange, activeProjectId }) {
   const templates = inspectionRepository.getTemplates();
-  const currentConfig = inspectionRepository.getProjectConfig();
+  const currentConfig = inspectionRepository.getProjectConfig(activeProjectId);
   const activeTemplate = inspectionRepository.getTemplateById(currentConfig.templateId);
-  const currentCommittee = inspectionRepository.getCommittee();
+  const currentCommittee = inspectionRepository.getCommittee(activeProjectId);
 
   // Selected Active Template state
   const [selectedTemplateId, setSelectedTemplateId] = useState(currentConfig.templateId);
@@ -51,10 +51,10 @@ export default function TemplateSettings({ onConfigChange }) {
       templateId: id,
       projectTitle: `ระบบตรวจรับ${selectedTemplate ? selectedTemplate.name : 'พัสดุ'}อัจฉริยะ`
     };
-    inspectionRepository.saveProjectConfig(newConfig);
-    
+    inspectionRepository.saveProjectConfig(newConfig, activeProjectId);
+
     // Adapt database to include new checklist fields if missing
-    const items = inspectionRepository.getItems();
+    const items = inspectionRepository.getItems(undefined, activeProjectId);
     const adaptedItems = items.map(item => {
       const checklist = { ...item.checklist };
       selectedTemplate.checklist.forEach(chk => {
@@ -74,7 +74,8 @@ export default function TemplateSettings({ onConfigChange }) {
         images
       };
     });
-    inspectionRepository.saveItems(adaptedItems);
+    inspectionRepository.saveItems(adaptedItems, activeProjectId);
+    inspectionRepository.logProjectEvent(activeProjectId, { type: 'template_change', message: `เปลี่ยนแม่แบบตรวจรับเป็น "${selectedTemplate?.name}"` });
 
     onConfigChange(newConfig);
     alert(`เปลี่ยนหัวข้อโครงการตรวจรับเป็น: "ระบบตรวจรับ${selectedTemplate?.name}" สำเร็จเรียบร้อย! ระบบจะปรับฟอร์มและรายงานอัตโนมัติ`);
@@ -138,6 +139,7 @@ export default function TemplateSettings({ onConfigChange }) {
     };
 
     inspectionRepository.saveCustomTemplate(newTemplate);
+    inspectionRepository.logProjectEvent(activeProjectId, { type: 'custom_template', message: `สร้างแม่แบบตรวจรับใหม่ "${newTemplate.name}"` });
     alert(`สร้างแบบตรวจรับแม่แบบใหม่ "${newTemplate.name}" สำเร็จเรียบร้อย! สามารถเลือกสลับใช้งานได้ทันที`);
     
     // Reset builder states
@@ -149,7 +151,8 @@ export default function TemplateSettings({ onConfigChange }) {
 
   // Save committee edits
   const handleSaveCommittee = () => {
-    inspectionRepository.saveCommittee(committee);
+    inspectionRepository.saveCommittee(committee, activeProjectId);
+    inspectionRepository.logProjectEvent(activeProjectId, { type: 'committee_update', message: 'แก้ไขรายชื่อคณะกรรมการตรวจรับ' });
     alert('บันทึกรายชื่อคณะกรรมการตรวจรับใหม่ลงแบบฟอร์มการรายงานแล้ว');
   };
 

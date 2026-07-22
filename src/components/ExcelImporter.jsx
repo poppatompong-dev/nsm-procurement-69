@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { Upload, FileSpreadsheet, Check, AlertCircle } from 'lucide-react';
+import { inspectionRepository } from '../utils/inspectionRepository';
 
 export default function ExcelImporter({ onImport }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -19,7 +20,13 @@ export default function ExcelImporter({ onImport }) {
         const sheetName = workbook.SheetNames.find(n => n.includes('ร้านค้า') || n.includes('ราคา') || n.includes('งบ')) || workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-        
+
+        // Derive the extra fields/checklist/evidence shape from the active project's
+        // template instead of hardcoding it-computer's -- so importing into a project
+        // using a different template (e.g. after cloning) produces the right shape.
+        const projectConfig = inspectionRepository.getProjectConfig();
+        const template = inspectionRepository.getTemplateById(projectConfig.templateId);
+
         const parsedItems = [];
         
         rawRows.forEach((row) => {
@@ -55,7 +62,15 @@ export default function ExcelImporter({ onImport }) {
               category = 'consumables';
             }
 
+            const extraFields = {};
+            template.fields.forEach(f => { extraFields[f.key] = ""; });
+            const evidenceImages = {};
+            template.evidence.forEach(ev => { evidenceImages[ev.key] = ""; });
+            const checklistDefaults = {};
+            template.checklist.forEach(chk => { checklistDefaults[chk.id] = false; });
+
             parsedItems.push({
+              ...extraFields,
               id: idNum,
               name,
               spec: name,
@@ -65,26 +80,8 @@ export default function ExcelImporter({ onImport }) {
               total_price,
               division,
               category,
-              images: {
-                product: "",
-                serial: "",
-                asset_plate: "",
-                box: "",
-                accessories: ""
-              },
-              serial_number: "",
-              mac_address: "",
-              asset_number: "",
-              checklist: {
-                qty_correct: true,
-                model_matches: true,
-                brand_matches: true,
-                serial_recorded: false,
-                physical_condition: true,
-                accessories_complete: true,
-                test_run: true,
-                warranty_checked: true
-              },
+              images: evidenceImages,
+              checklist: checklistDefaults,
               inspectStatus: 'passed',
               notes: '',
               timeline: {

@@ -12,7 +12,12 @@ export const parseUrlState = (currentItems) => {
       const decoded = JSON.parse(json);
       
       const result = {};
-      
+
+      // Restore project identity -- App.jsx uses this to skip merging committee/items
+      // data when the link was generated from a different project than the one open now.
+      if (decoded.p) result.sourceProjectId = decoded.p;
+      if (decoded.pn) result.sourceProjectName = decoded.pn;
+
       // Restore committee members
       if (decoded.c && Array.isArray(decoded.c)) {
         result.committee = decoded.c.map(m => ({
@@ -78,11 +83,14 @@ export const parseUrlState = (currentItems) => {
  * @param {Array} committee - Current committee list
  * @param {Array} items - Current items list
  * @param {Object} uiState - Current UI states (activeTab, viewMode, sortBy, filters, selectedItemId)
+ * @param {Object} projectMeta - { id, name } of the project this link is generated from
  * @returns {string} The full shareable URL
  */
-export const generateShareLink = (committee, items, uiState = {}) => {
+export const generateShareLink = (committee, items, uiState = {}, projectMeta = {}) => {
   try {
     const state = {
+      p: projectMeta.id,
+      pn: projectMeta.name,
       c: committee.map(m => ({ n: m.name, p: m.position })),
       s: items
         .filter(i => 

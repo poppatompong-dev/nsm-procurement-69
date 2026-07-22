@@ -1,7 +1,6 @@
-- `[x]` 1. stateCompressor.js: Expand state compression variables.
-- `[x]` 2. ShareModal.jsx: Build the QR Code + Social Sharing Dialog Component.
-- `[x]` 3. InsightEngine.js: Implement automated insight generation algorithms.
-- `[x]` 4. index.css: Inject the Vimana watermark background and depth layers.
-- `[x]` 5. Dashboard.jsx: Enhance analytics charts and the executive panel.
-- `[x]` 6. App.jsx: Integrate URL restoration, filters, and sharing dialogs.
-- `[x]` 7. Verification: Run build validation and manual checkups.
+- `[x]` 1. inspectionRepository.js: Add project-level event log (`logProjectEvent`/`getProjectEvents`) and a per-project "current actor" setting (`getCurrentActor`/`setCurrentActor`) for audit attribution.
+- `[x]` 2. ItemDetailModal.jsx: Replace the hardcoded committee-index actor guess with the real current-actor setting; extend the existing per-item `history` audit trail to also log checklist changes, evidence photo uploads (without ever storing raw image data in the log), and defect/issue additions, status changes, and removals.
+- `[x]` 3. ActivityLog.jsx (new): Unified project + item activity timeline with scope filters and an actor selector.
+- `[x]` 4. App.jsx: Add "ประวัติกิจกรรม" nav tab; log project-level events for Excel import, database reset, report printing, and project switching.
+- `[x]` 5. ProjectManager.jsx / TemplateSettings.jsx: Wired project-level event logging into create/clone/import/delete (inside the repository) and template switch / committee update / custom template creation.
+- `[x]` 6. Verification: Ran build validation and manual in-browser checks (Excel import event, checklist/photo/status/issue changes all appear in the item's audit trail with clean before→after values, project vs. item scope filters, actor selection persists and attributes correctly).
