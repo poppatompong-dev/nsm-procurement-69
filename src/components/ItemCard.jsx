@@ -8,12 +8,11 @@ import {
   Layers
 } from 'lucide-react';
 import { formatNumber } from '../utils/numberFormatter';
+import { getImageUrl } from '../utils/imageHelper';
 import CategoryMockup from './CategoryMockup';
 
 export default function ItemCard({ item, onClick, onStatusChange }) {
-  const imageSrc = item.images?.product 
-    ? (item.images.product.startsWith('data:') ? item.images.product : `./รูปภาพ/${item.images.product}`)
-    : (item.image ? (item.image.startsWith('data:') ? item.image : (item.image.startsWith('/') ? item.image : `./${item.image}`)) : null);
+  const imageSrc = getImageUrl(item);
 
   const getCategoryLabel = (c) => {
     switch (c) {
@@ -63,7 +62,6 @@ export default function ItemCard({ item, onClick, onStatusChange }) {
               alt={item.name} 
               loading="lazy"
               className="w-full h-full object-cover"
-              onError={(e) => { e.target.style.display = 'none'; }}
             />
           ) : (
             <CategoryMockup category={item.category} size="large" />

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Printer, Download, FileJson, FileSpreadsheet, Image as ImageIcon, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { formatNumber } from '../utils/numberFormatter';
-import { inspectionRepository } from '../utils/inspectionRepository';
+import { getImageUrl } from '../utils/imageHelper';
 
 const GarudaEmblem = () => (
   <svg 
@@ -29,12 +29,6 @@ export default function OfficialReport({
   divisions
 }) {
   const [includePhotos, setIncludePhotos] = useState(true);
-
-  const getItemImageSrc = (item) => {
-    return item.images?.product 
-      ? (item.images.product.startsWith('data:') ? item.images.product : `./รูปภาพ/${item.images.product}`)
-      : (item.image ? (item.image.startsWith('data:') ? item.image : (item.image.startsWith('/') ? item.image : `./${item.image}`)) : null);
-  };
 
   const renderItemRows = () => {
     return items.map((item, idx) => (
@@ -253,7 +247,7 @@ export default function OfficialReport({
             {/* Photo Grid (2-Column Grid Optimized for A4 Print) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6">
               {items.map((item, idx) => {
-                const img = getItemImageSrc(item);
+                const img = getImageUrl(item);
                 return (
                   <div 
                     key={item.id}
@@ -275,13 +269,12 @@ export default function OfficialReport({
                       </div>
 
                       {/* Photo Container */}
-                      <div className="w-full h-48 bg-slate-200/80 rounded-lg overflow-hidden border border-slate-300 flex items-center justify-center relative mb-3">
+                      <div className="w-full h-48 bg-slate-100 rounded-lg overflow-hidden border border-slate-300 flex items-center justify-center relative mb-3">
                         {img ? (
                           <img 
                             src={img} 
                             alt={item.name}
                             className="w-full h-full object-cover"
-                            onError={(e) => { e.target.style.display = 'none'; }}
                           />
                         ) : (
                           <div className="text-slate-400 text-xs font-medium">ไม่มีรูปภาพพัสดุ</div>
