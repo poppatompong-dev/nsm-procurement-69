@@ -755,7 +755,8 @@ export default function App() {
       )}
 
       {isImageMapperOpen && (
-        <ImageMappingManager 
+        <ImageMappingManager
+          items={items}
           onClose={() => setIsImageMapperOpen(false)}
           onSaveAll={(updatedData) => {
             setItems(updatedData);
