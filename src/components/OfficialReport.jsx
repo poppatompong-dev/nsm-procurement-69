@@ -42,34 +42,34 @@ export default function OfficialReport({
   const renderCell = (key, item, idx) => {
     switch (key) {
       case 'no':
-        return <td key={key} className="px-3 py-3 text-center font-bold text-slate-800 print:text-black num-tabular text-sm">{idx + 1}</td>;
+        return <td key={key} className="px-3 py-3.5 text-center font-bold text-slate-800 print:text-black num-tabular text-base">{idx + 1}</td>;
       case 'name':
         return (
-          <td key={key} className="px-3.5 py-3 text-left font-bold text-slate-900 print:text-black leading-normal text-sm">
+          <td key={key} className="px-3.5 py-3.5 text-left font-bold text-slate-900 print:text-black leading-normal text-base">
             {item.name}
             {item.spec && (
-              <div className="text-xs font-normal text-slate-600 print:text-slate-700 mt-1 whitespace-pre-line leading-relaxed font-sans">
+              <div className="text-sm font-normal text-slate-600 print:text-black mt-1 whitespace-pre-line leading-relaxed">
                 {item.spec}
               </div>
             )}
             {item.notes && (
-              <div className="text-xs font-medium text-amber-900 bg-amber-50 print:bg-transparent px-2.5 py-1 mt-1.5 rounded border border-amber-200 print:border-none">
+              <div className="text-sm font-medium text-amber-900 print:text-black bg-amber-50 print:bg-transparent px-2.5 py-1 mt-1.5 rounded border border-amber-200 print:border-slate-900">
                 ข้อคิดเห็นการตรวจรับ: {item.notes}
               </div>
             )}
           </td>
         );
       case 'qty':
-        return <td key={key} className="px-3 py-3 text-center font-bold text-slate-800 print:text-black num-tabular text-sm">{item.qty}</td>;
+        return <td key={key} className="px-3 py-3.5 text-center font-bold text-slate-800 print:text-black num-tabular text-base">{item.qty}</td>;
       case 'unit':
-        return <td key={key} className="px-3 py-3 text-center font-medium text-slate-800 print:text-black text-sm">{item.unit}</td>;
+        return <td key={key} className="px-3 py-3.5 text-center font-medium text-slate-800 print:text-black text-base">{item.unit}</td>;
       case 'unitPrice':
-        return <td key={key} className="px-3 py-3 text-right font-medium text-slate-800 print:text-black num-tabular text-sm">{formatNumber(item.unit_price)}</td>;
+        return <td key={key} className="px-3 py-3.5 text-right font-medium text-slate-800 print:text-black num-tabular text-base">{formatNumber(item.unit_price)}</td>;
       case 'total':
-        return <td key={key} className="px-3 py-3 text-right font-bold text-slate-900 print:text-black num-tabular text-sm">{formatNumber(item.qty * item.unit_price)}</td>;
+        return <td key={key} className="px-3 py-3.5 text-right font-bold text-slate-900 print:text-black num-tabular text-base">{formatNumber(item.qty * item.unit_price)}</td>;
       case 'status':
         return (
-          <td key={key} className="px-3 py-3 text-center font-bold text-sm">
+          <td key={key} className="px-3 py-3.5 text-center font-bold text-base">
             {item.inspectStatus === 'passed' ? (
               <span className="text-emerald-700 print:text-black">ผ่าน</span>
             ) : item.inspectStatus === 'failed' ? (
@@ -96,14 +96,14 @@ export default function OfficialReport({
     const totalIdx = activeColumns.findIndex(c => c.key === 'total');
     const labelSpan = totalIdx === -1 ? activeColumns.length : totalIdx;
     const cells = [
-      <td key="label" colSpan={labelSpan} className="px-3.5 py-4 text-right">
+      <td key="label" colSpan={labelSpan} className="px-3.5 py-4 text-right text-lg">
         รวมงบประมาณจัดซื้อทั้งสิ้น: {stats.totalItems} รายการ
         {totalIdx === -1 && <span className="ml-2">({formatNumber(stats.totalBudget)} บาท)</span>}
       </td>
     ];
     if (totalIdx !== -1) {
       cells.push(
-        <td key="total" className="px-3 py-4 text-right num-tabular font-black">{formatNumber(stats.totalBudget)}</td>
+        <td key="total" className="px-3 py-4 text-right num-tabular font-black text-lg">{formatNumber(stats.totalBudget)}</td>
       );
       for (let i = totalIdx + 1; i < activeColumns.length; i++) {
         cells.push(<td key={activeColumns[i].key} className="px-3 py-4"></td>);
@@ -227,13 +227,13 @@ export default function OfficialReport({
       </div>
 
       {/* 2. Main Official Document Container */}
-      <div className="bg-white p-8 sm:p-12 md:p-16 shadow-lg border border-slate-200 rounded-2xl mx-auto text-slate-900 print:shadow-none print:border-none print:p-0 print:m-0 print:max-w-none">
+      <div className="bg-white p-8 sm:p-12 md:p-16 shadow-lg border border-slate-200 rounded-2xl mx-auto text-slate-900 font-serif print:shadow-none print:border-none print:p-0 print:m-0 print:max-w-none">
         
         {/* Document Official Header */}
         <div className="text-center space-y-4 pb-6 border-b-2 border-slate-900">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-wide">รายงานการตรวจรับพัสดุคอมพิวเตอร์</h1>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-left max-w-2xl mx-auto pt-3 leading-relaxed font-sans">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-wide">รายงานการตรวจรับพัสดุคอมพิวเตอร์</h1>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-base text-left max-w-2xl mx-auto pt-3 leading-relaxed">
             <div>
               <strong>โครงการ:</strong> จัดซื้อวัสดุคอมพิวเตอร์ งบประมาณ พ.ศ. 2569
             </div>
@@ -250,18 +250,18 @@ export default function OfficialReport({
         </div>
 
         {/* Verification Summary Bar */}
-        <div className="py-4 flex flex-col sm:flex-row justify-between items-center text-sm border-b border-slate-300 gap-2">
+        <div className="py-4 flex flex-col sm:flex-row justify-between items-center text-base border-b border-slate-300 gap-2">
           <div>
             <strong>สรุปผลการตรวจรับ:</strong> ผ่านเกณฑ์ {stats.passedCount} จาก {stats.totalItems} รายการ
           </div>
           <div>
-            <strong>มูลค่าจัดซื้อรวม:</strong> <span className="font-bold text-base num-tabular">{formatNumber(stats.totalBudget)} บาท</span>
+            <strong>มูลค่าจัดซื้อรวม:</strong> <span className="font-bold text-lg num-tabular">{formatNumber(stats.totalBudget)} บาท</span>
           </div>
         </div>
 
         {/* Summary Table */}
         <div className="overflow-x-auto pt-6">
-          <table className="w-full text-sm text-left border-collapse font-sans">
+          <table className="w-full text-base text-left border-collapse">
             <thead>
               <tr className="border-b-2 border-slate-900 text-center font-bold bg-slate-50 print:bg-transparent">
                 {activeColumns.length === 0 ? (
@@ -276,7 +276,7 @@ export default function OfficialReport({
             <tbody>
               {activeColumns.length === 0 ? (
                 <tr>
-                  <td className="px-3 py-6 text-center text-slate-500 text-sm">
+                  <td className="px-3 py-6 text-center text-slate-500 print:text-black text-base">
                     กรุณาเลือกอย่างน้อย 1 คอลัมน์จากปุ่ม "คอลัมน์ที่พิมพ์" ด้านบน
                   </td>
                 </tr>
@@ -295,9 +295,9 @@ export default function OfficialReport({
         </div>
 
         {/* Signatures Section */}
-        <div className="mt-12 pt-8 border-t border-slate-300 print-no-break space-y-8 font-sans">
+        <div className="mt-12 pt-8 border-t border-slate-300 print-no-break space-y-8">
           
-          <div className="text-center text-sm leading-relaxed font-medium max-w-2xl mx-auto">
+          <div className="text-center text-base leading-relaxed font-medium max-w-2xl mx-auto">
             ขอรับรองว่าพัสดุตามรายการข้างต้น ได้รับการตรวจสอบคุณลักษณะเฉพาะและทดลองใช้งานแล้วเสร็จ ผลการตรวจรับเป็นไปตามเงื่อนไขสัญญาจัดซื้อทุกประการ
           </div>
 
@@ -306,8 +306,8 @@ export default function OfficialReport({
               <div key={index} className="text-center space-y-6 flex flex-col items-center">
                 <div className="w-56 border-b border-slate-900 pt-8"></div>
                 <div className="space-y-1">
-                  <p className="text-sm font-bold">({member.name})</p>
-                  <p className="text-xs text-slate-700 print:text-black leading-relaxed font-medium">{member.position}</p>
+                  <p className="text-base font-bold">({member.name})</p>
+                  <p className="text-sm text-slate-700 print:text-black leading-relaxed font-medium">{member.position}</p>
                 </div>
               </div>
             ))}
@@ -317,14 +317,14 @@ export default function OfficialReport({
 
         {/* 3. Photo Evidence Annex Section (If Enabled) */}
         {includePhotos && (
-          <div className="mt-16 pt-10 border-t-2 border-slate-900 font-sans print:break-before-page">
+          <div className="mt-16 pt-10 border-t-2 border-slate-900 print:break-before-page">
             
             {/* Annex Header */}
             <div className="text-center space-y-2 pb-6 border-b border-slate-300">
-              <h2 className="text-lg sm:text-xl font-bold tracking-wide text-slate-900">
+              <h2 className="text-xl sm:text-2xl font-bold tracking-wide text-slate-900">
                 ภาคผนวก: ภาพถ่ายหลักฐานพัสดุจริงจากการตรวจรับ
               </h2>
-              <p className="text-xs text-slate-600 print:text-slate-700">
+              <p className="text-sm text-slate-600 print:text-black">
                 คำสั่งเทศบาลนครนครสวรรค์ ที่ ๘๖๔/๒๕๖๙ (จำนวนพัสดุทั้งสิ้น {items.length} รายการ)
               </p>
             </div>
@@ -342,10 +342,10 @@ export default function OfficialReport({
                       {/* Item Title & Badge */}
                       <div className="flex items-start justify-between gap-2 mb-2 pb-2 border-b border-slate-200">
                         <div>
-                          <span className="font-bold text-xs text-slate-500 block">ลำดับที่ {idx + 1} (ID #{item.id})</span>
-                          <h4 className="font-bold text-sm text-slate-900 line-clamp-2">{item.name}</h4>
+                          <span className="font-bold text-sm text-slate-500 print:text-black block">ลำดับที่ {idx + 1} (ID #{item.id})</span>
+                          <h4 className="font-bold text-base text-slate-900 line-clamp-2">{item.name}</h4>
                         </div>
-                        <span className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 ${
+                        <span className={`px-2.5 py-1 rounded-lg text-sm font-bold shrink-0 print:bg-white print:border print:border-slate-900 print:text-black ${
                           item.inspectStatus === 'passed' ? 'bg-emerald-100 text-emerald-800' :
                           item.inspectStatus === 'failed' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
                         }`}>
@@ -368,19 +368,19 @@ export default function OfficialReport({
                         ) : (
                           <div className="flex flex-col items-center justify-center gap-2 text-center px-4">
                             <ImageOff className="w-7 h-7 text-slate-400 print:text-slate-600" strokeWidth={1.5} />
-                            <span className="text-xs font-bold text-slate-500 print:text-slate-700 tracking-wide">ไม่มีภาพถ่ายประกอบ</span>
+                            <span className="text-sm font-bold text-slate-500 print:text-slate-700 tracking-wide">ไม่มีภาพถ่ายประกอบ</span>
                           </div>
                         )}
                       </div>
 
                       {/* Spec summary */}
-                      <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed mb-2 font-normal">
+                      <p className="text-sm text-slate-600 print:text-black line-clamp-2 leading-relaxed mb-2 font-normal">
                         {item.spec}
                       </p>
                     </div>
 
                     {/* Footer info */}
-                    <div className="text-xs font-bold text-slate-800 pt-2 border-t border-slate-200 flex justify-between items-center">
+                    <div className="text-sm font-bold text-slate-800 print:text-black pt-2 border-t border-slate-200 flex justify-between items-center">
                       <span>จำนวน {item.qty} {item.unit}</span>
                       <span>รวม {formatNumber(item.qty * item.unit_price)} บาท</span>
                     </div>

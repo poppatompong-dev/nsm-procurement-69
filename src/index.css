@@ -20,7 +20,11 @@
   --color-status-failed-light: #fef2f2;
   
   --font-sans: "Inter", "Prompt", sans-serif;
-  --font-serif: "Sarabun", "TH Sarabun PSK", serif;
+  /* Official Thai government document font (ฟอนต์มาตรฐานราชการ) -- prefers the
+     real "SarabunIT๙" font when installed on the machine (standard on Thai
+     government computers), falling back to the visually-close Sarabun webfont
+     loaded above when it isn't. */
+  --font-serif: "TH SarabunIT๙", "SarabunIT๙", "TH SarabunIT9", "TH SarabunPSK", "TH Sarabun New", "Sarabun", serif;
   
   --shadow-premium: 0 4px 20px -2px rgba(11, 19, 43, 0.04), 0 2px 8px -1px rgba(11, 19, 43, 0.02);
   --shadow-floating: 0 12px 30px -5px rgba(11, 19, 43, 0.08), 0 4px 12px -2px rgba(11, 19, 43, 0.03);
