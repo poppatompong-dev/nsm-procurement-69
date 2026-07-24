@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  PackageCheck, 
-  FileText, 
+  PackageCheck,
+  FileText,
   Settings,
-  Share2, 
+  Share2,
   RotateCcw,
+  Undo2,
+  ShieldAlert,
   CheckCircle2,
   Menu,
   X,
@@ -31,6 +33,7 @@ import OfficialReport from './components/OfficialReport';
 import ExcelImporter from './components/ExcelImporter';
 import ShareModal from './components/ShareModal';
 import ImageMappingManager from './components/ImageMappingManager';
+import ResetConfirmModal from './components/ResetConfirmModal';
 
 // Import utilities
 import { parseUrlState, generateShareLink } from './utils/stateCompressor';
@@ -72,11 +75,14 @@ export default function App() {
   // Selected item for detail modal
   const [selectedItem, setSelectedItem] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
-  
+  const [toastAction, setToastAction] = useState(null);
+
   // Modals
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isImageMapperOpen, setIsImageMapperOpen] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [hasResetBackup, setHasResetBackup] = useState(false);
 
   // Active project & template state
   const [activeProjectId, setActiveProjectId] = useState(null);
@@ -115,13 +121,16 @@ export default function App() {
     setCommittee(currentCommittee);
     setEditedCommittee(currentCommittee);
     setItems(currentItems);
+    setHasResetBackup(inspectionRepository.hasResetBackup(pid));
   }, []);
 
-  const showToast = (msg) => {
+  const showToast = (msg, action = null) => {
     setToastMessage(msg);
+    setToastAction(action);
     setTimeout(() => {
       setToastMessage(null);
-    }, 4000);
+      setToastAction(null);
+    }, action ? 8000 : 4000);
   };
 
   // Cache changes to repository
@@ -268,12 +277,31 @@ export default function App() {
     showToast('💾 บันทึกรายชื่อคณะกรรมการเรียบร้อย');
   };
 
-  const handleResetDatabase = () => {
-    if (window.confirm('🚨 ต้องการรีเซ็ตผลตรวจรับของโครงการนี้กลับเป็นค่าเริ่มต้นใช่หรือไม่?')) {
-      inspectionRepository.resetAll(activeProjectId);
+  const confirmResetDatabase = () => {
+    const ok = inspectionRepository.resetAll(activeProjectId);
+    if (ok) {
       setItems(initialProcurementData);
-      showToast('🔄 รีเซ็ตข้อมูลกลับเป็นค่าเริ่มต้นเรียบร้อย');
+      setIsResetConfirmOpen(false);
+      setHasResetBackup(true);
+      showToast('🔄 รีเซ็ตข้อมูลกลับเป็นค่าเริ่มต้นเรียบร้อย (กู้คืนได้ที่หน้าตั้งค่า)', {
+        label: 'เลิกทำ (Undo)',
+        onClick: handleUndoReset
+      });
     }
+  };
+
+  const handleUndoReset = () => {
+    const ok = inspectionRepository.undoLastReset(activeProjectId);
+    if (!ok) return;
+    setItems(inspectionRepository.getItems(initialProcurementData, activeProjectId));
+    const restoredCommittee = inspectionRepository.getCommittee(activeProjectId);
+    setCommittee(restoredCommittee);
+    setEditedCommittee(restoredCommittee);
+    setProjectConfig(inspectionRepository.getProjectConfig(activeProjectId));
+    setHasResetBackup(false);
+    setToastMessage(null);
+    setToastAction(null);
+    showToast('↩️ เรียกคืนข้อมูลก่อนการรีเซ็ตเรียบร้อยแล้ว');
   };
 
   const handleImportExcel = (newItems) => {
@@ -318,8 +346,18 @@ export default function App() {
       
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl border border-slate-700 text-sm font-bold animate-fade-in flex items-center gap-2">
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl border border-slate-700 text-sm font-bold animate-fade-in flex items-center gap-3">
           <span>{toastMessage}</span>
+          {toastAction && (
+            <button
+              onClick={() => {
+                toastAction.onClick();
+              }}
+              className="shrink-0 px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-lg text-xs font-black cursor-pointer"
+            >
+              {toastAction.label}
+            </button>
+          )}
         </div>
       )}
 
@@ -397,22 +435,13 @@ export default function App() {
             <span>จับคู่รูปภาพอัตโนมัติ (49 ภาพ)</span>
           </button>
 
-          <div className="flex gap-2">
-            <button
-              onClick={() => setIsShareModalOpen(true)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold cursor-pointer"
-            >
-              <Share2 className="w-4 h-4 text-amber-400" />
-              <span>แชร์ลิงก์</span>
-            </button>
-            <button
-              onClick={handleResetDatabase}
-              className="p-2.5 bg-slate-800 hover:bg-rose-900 text-slate-300 hover:text-rose-200 rounded-xl text-xs font-bold cursor-pointer"
-              title="รีเซ็ตข้อมูล"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-          </div>
+          <button
+            onClick={() => setIsShareModalOpen(true)}
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold cursor-pointer"
+          >
+            <Share2 className="w-4 h-4 text-amber-400" />
+            <span>แชร์ลิงก์</span>
+          </button>
         </div>
 
       </aside>
@@ -671,6 +700,44 @@ export default function App() {
                 </div>
               </div>
 
+              {/* Danger Zone: Reset */}
+              <div className="bg-rose-50/60 p-6 rounded-2xl border-2 border-rose-200 space-y-4">
+                <h3 className="text-lg font-bold text-rose-800 flex items-center gap-2">
+                  <ShieldAlert className="w-5 h-5 text-rose-600" />
+                  โซนอันตราย
+                </h3>
+
+                {hasResetBackup && (
+                  <div className="p-4 bg-white rounded-xl border border-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">มีข้อมูลก่อนการรีเซ็ตล่าสุดที่ยังกู้คืนได้</p>
+                      <p className="text-xs text-slate-500">กู้คืนได้ 1 ครั้ง — หากรีเซ็ตซ้ำอีก ข้อมูลชุดนี้จะถูกเขียนทับ</p>
+                    </div>
+                    <button
+                      onClick={handleUndoReset}
+                      className="shrink-0 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-black transition-colors cursor-pointer"
+                    >
+                      <Undo2 className="w-4 h-4" />
+                      กู้คืนข้อมูลก่อนรีเซ็ต
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <p className="text-xs text-rose-700 leading-relaxed max-w-md">
+                    รีเซ็ตรายการตรวจรับ รูปภาพหลักฐาน และรายชื่อคณะกรรมการของโครงการนี้กลับเป็นค่าเริ่มต้นทั้งหมด
+                    ต้องพิมพ์ชื่อโครงการยืนยันก่อนจึงจะรีเซ็ตได้
+                  </p>
+                  <button
+                    onClick={() => setIsResetConfirmOpen(true)}
+                    className="shrink-0 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white border-2 border-rose-300 hover:bg-rose-600 hover:border-rose-600 hover:text-white text-rose-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    รีเซ็ตข้อมูลโครงการนี้
+                  </button>
+                </div>
+              </div>
+
             </div>
           )}
 
@@ -699,10 +766,18 @@ export default function App() {
       )}
 
       {isShareModalOpen && (
-        <ShareModal 
+        <ShareModal
           isOpen={isShareModalOpen}
           onClose={() => setIsShareModalOpen(false)}
           generateLink={() => generateShareLink(committee, items, {}, { id: activeProjectId })}
+        />
+      )}
+
+      {isResetConfirmOpen && (
+        <ResetConfirmModal
+          projectName={projectConfig?.projectTitle || ''}
+          onClose={() => setIsResetConfirmOpen(false)}
+          onConfirm={confirmResetDatabase}
         />
       )}
 

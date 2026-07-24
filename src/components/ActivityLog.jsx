@@ -9,6 +9,7 @@ const TYPE_LABELS = {
   delete: 'ลบโครงการ',
   excel_import: 'นำเข้าสเปกพัสดุ',
   reset: 'รีเซ็ตฐานข้อมูล',
+  undo_reset: 'เรียกคืนข้อมูลก่อนรีเซ็ต',
   print: 'พิมพ์รายงาน',
   switch: 'สลับโครงการ',
   template_change: 'เปลี่ยนแม่แบบ',

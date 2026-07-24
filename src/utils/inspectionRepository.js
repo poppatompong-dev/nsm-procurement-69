@@ -81,6 +81,7 @@ const projectCommitteeKey = (id) => `${STORAGE_KEYS.COMMITTEE}__${id}`;
 const projectConfigKey = (id) => `${STORAGE_KEYS.CONFIG}__${id}`;
 const projectEventsKey = (id) => `procurement_events_v1__${id}`;
 const projectActorKey = (id) => `procurement_actor_v1__${id}`;
+const projectResetBackupKey = (id) => `procurement_reset_backup_v1__${id}`;
 
 const generateProjectId = () => `proj_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
@@ -460,18 +461,61 @@ export const inspectionRepository = {
   },
 
   /**
-   * Reset the given project's items/committee/config back to factory settings
+   * Reset the given project's items/committee/config back to factory settings.
+   * Snapshots the current data into a one-slot recovery backup first, so an
+   * accidental reset (e.g. a misclick) can be undone via undoLastReset().
    */
   resetAll: (projectId = null) => {
     const pid = projectId || inspectionRepository.getActiveProjectId();
     if (!pid) return false;
     try {
+      const backup = {
+        savedAt: new Date().toISOString(),
+        items: inspectionRepository.getItems(undefined, pid),
+        committee: inspectionRepository.getCommittee(pid),
+        config: inspectionRepository.getProjectConfig(pid)
+      };
+      localStorage.setItem(projectResetBackupKey(pid), JSON.stringify(backup));
+
       localStorage.removeItem(projectItemsKey(pid));
       localStorage.removeItem(projectCommitteeKey(pid));
       localStorage.removeItem(projectConfigKey(pid));
+      inspectionRepository.logProjectEvent(pid, { type: 'reset', message: 'รีเซ็ตข้อมูลโครงการกลับเป็นค่าเริ่มต้น (สำรองข้อมูลเดิมไว้ให้กู้คืนได้)' });
       return true;
     } catch (e) {
       console.error('Failed to reset project data', e);
+      return false;
+    }
+  },
+
+  /**
+   * Whether a one-slot recovery backup exists for this project (i.e. a reset
+   * happened and hasn't been undone yet).
+   */
+  hasResetBackup: (projectId = null) => {
+    const pid = projectId || inspectionRepository.getActiveProjectId();
+    return !!(pid && localStorage.getItem(projectResetBackupKey(pid)));
+  },
+
+  /**
+   * Restore items/committee/config from the last resetAll() snapshot, then
+   * clear the backup slot (single-level undo, not a full history stack).
+   */
+  undoLastReset: (projectId = null) => {
+    const pid = projectId || inspectionRepository.getActiveProjectId();
+    if (!pid) return false;
+    try {
+      const json = localStorage.getItem(projectResetBackupKey(pid));
+      if (!json) return false;
+      const backup = JSON.parse(json);
+      localStorage.setItem(projectItemsKey(pid), JSON.stringify(backup.items || []));
+      localStorage.setItem(projectCommitteeKey(pid), JSON.stringify(backup.committee || DEFAULT_COMMITTEE));
+      localStorage.setItem(projectConfigKey(pid), JSON.stringify(backup.config || DEFAULT_PROJECT_CONFIG));
+      localStorage.removeItem(projectResetBackupKey(pid));
+      inspectionRepository.logProjectEvent(pid, { type: 'undo_reset', message: 'เรียกคืนข้อมูลก่อนการรีเซ็ตล่าสุด' });
+      return true;
+    } catch (e) {
+      console.error('Failed to undo reset', e);
       return false;
     }
   },
