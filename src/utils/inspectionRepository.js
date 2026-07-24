@@ -403,7 +403,7 @@ export const inspectionRepository = {
         // Auto-heal missing or duplicate images if items have legacy empty/duplicate values
         let healed = false;
         const result = loadedItems.map(item => {
-          if (MAPPING_FIXES[item.id] && (!item.image || item.image === '' || (item.id === 41 && item.image === '87163_0.jpg') || (item.id === 42 && !item.image))) {
+          if (!item.images?.noPhotoConfirmed && MAPPING_FIXES[item.id] && (!item.image || item.image === '' || (item.id === 41 && item.image === '87163_0.jpg') || (item.id === 42 && !item.image))) {
             healed = true;
             const targetImg = MAPPING_FIXES[item.id];
             return {
@@ -430,6 +430,7 @@ export const inspectionRepository = {
    */
   autoMatchAllImages: (items, projectId = null) => {
     const updated = items.map(item => {
+      if (item.images?.noPhotoConfirmed) return item;
       const targetImg = MAPPING_FIXES[item.id];
       if (targetImg) {
         return {
@@ -446,6 +447,16 @@ export const inspectionRepository = {
     inspectionRepository.saveItems(updated, projectId);
     return updated;
   },
+
+  /**
+   * Explicitly clear an item's photo and flag it as confirmed-no-photo so
+   * auto-heal / auto-match won't silently refill it on the next load.
+   */
+  clearItemImage: (item) => ({
+    ...item,
+    image: '',
+    images: { ...(item.images || {}), product: '', noPhotoConfirmed: true }
+  }),
 
   /**
    * Save list of inspection items

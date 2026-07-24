@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { 
-  CheckCircle2, 
-  Sparkles, 
-  Download, 
-  X, 
-  Image as ImageIcon, 
-  Search, 
-  Eye, 
+import {
+  CheckCircle2,
+  Sparkles,
+  Download,
+  X,
+  Image as ImageIcon,
+  ImageOff,
+  Search,
+  Eye,
   Zap,
   Tag
 } from 'lucide-react';
@@ -27,6 +28,16 @@ export default function ImageMappingManager({ items = [], onUpdateItems, onSaveA
     if (onUpdateItems) onUpdateItems(updated);
     if (onSaveAll) onSaveAll(updated);
     showToast('✨ ทำการจับคู่รูปภาพพัสดุครบ 49 รายการเรียบร้อยแล้ว (100% Match)');
+  };
+
+  // Explicitly mark one item as having no photo (won't get auto-reassigned again)
+  const handleMarkNoPhoto = (itemId) => {
+    const updated = itemList.map(it =>
+      it.id === itemId ? inspectionRepository.clearItemImage(it) : it
+    );
+    if (onUpdateItems) onUpdateItems(updated);
+    if (onSaveAll) onSaveAll(updated);
+    showToast(`🚫 ทำเครื่องหมายรายการ ID #${itemId} ว่าไม่มีรูปภาพแล้ว`);
   };
 
   // Export JSON file
@@ -52,7 +63,7 @@ export default function ImageMappingManager({ items = [], onUpdateItems, onSaveA
     item.id.toString().includes(searchQuery)
   );
 
-  const matchedCount = itemList.filter(item => Boolean(item.image)).length;
+  const matchedCount = itemList.filter(item => Boolean(item.image) || item.images?.noPhotoConfirmed).length;
 
   return (
     <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-fade-in">
@@ -148,12 +159,12 @@ export default function ImageMappingManager({ items = [], onUpdateItems, onSaveA
                   <div className="w-full h-36 bg-slate-100 rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center relative mb-3 group">
                     {img ? (
                       <>
-                        <img 
-                          src={img} 
-                          alt={item.name} 
+                        <img
+                          src={img}
+                          alt={item.name}
                           className="w-full h-full object-cover"
                         />
-                        <button 
+                        <button
                           onClick={() => setSelectedPreviewImage(img)}
                           className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs gap-1.5 cursor-pointer"
                         >
@@ -161,6 +172,11 @@ export default function ImageMappingManager({ items = [], onUpdateItems, onSaveA
                           <span>ดูรูปขนาดใหญ่</span>
                         </button>
                       </>
+                    ) : item.images?.noPhotoConfirmed ? (
+                      <div className="text-slate-500 text-xs font-bold flex flex-col items-center gap-1.5">
+                        <ImageOff className="w-5 h-5 text-slate-400" strokeWidth={1.5} />
+                        <span>ยืนยันแล้วว่าไม่มีรูปภาพ</span>
+                      </div>
                     ) : (
                       <div className="text-slate-400 text-xs font-medium flex items-center gap-1.5">
                         <ImageIcon className="w-4 h-4" />
@@ -170,8 +186,20 @@ export default function ImageMappingManager({ items = [], onUpdateItems, onSaveA
                   </div>
                 </div>
 
-                <div className="text-xs font-mono text-slate-500 bg-slate-50 p-2 rounded-lg truncate border border-slate-200">
-                  📷 {item.image || 'ไม่ระบุไฟล์'}
+                <div className="space-y-2">
+                  <div className="text-xs font-mono text-slate-500 bg-slate-50 p-2 rounded-lg truncate border border-slate-200">
+                    📷 {item.image || 'ไม่ระบุไฟล์'}
+                  </div>
+                  {!item.images?.noPhotoConfirmed && (
+                    <button
+                      type="button"
+                      onClick={() => handleMarkNoPhoto(item.id)}
+                      className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-slate-500 hover:text-rose-700 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg py-1.5 transition-colors cursor-pointer"
+                    >
+                      <ImageOff className="w-3.5 h-3.5" />
+                      <span>ไม่มีรูปภาพสำหรับรายการนี้</span>
+                    </button>
+                  )}
                 </div>
               </div>
             );

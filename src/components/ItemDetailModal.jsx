@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
-  MessageSquare, 
-  Tag, 
-  Upload, 
-  MapPin, 
+import {
+  X,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  MessageSquare,
+  Tag,
+  Upload,
+  MapPin,
   Layers,
   Save,
-  Check
+  Check,
+  ImageOff
 } from 'lucide-react';
 import { formatNumber } from '../utils/numberFormatter';
 import CategoryMockup from './CategoryMockup';
@@ -20,6 +21,7 @@ export default function ItemDetailModal({ item, onClose, onSave }) {
   const [notes, setNotes] = useState(item?.notes || '');
   const [serialNumber, setSerialNumber] = useState(item?.serial_number || '');
   const [customImage, setCustomImage] = useState(item?.images?.product || item?.image || '');
+  const [noPhotoConfirmed, setNoPhotoConfirmed] = useState(item?.images?.noPhotoConfirmed || false);
   const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
@@ -28,6 +30,7 @@ export default function ItemDetailModal({ item, onClose, onSave }) {
       setNotes(item.notes || '');
       setSerialNumber(item.serial_number || '');
       setCustomImage(item.images?.product || item.image || '');
+      setNoPhotoConfirmed(item.images?.noPhotoConfirmed || false);
       setIsSaved(false);
     }
   }, [item]);
@@ -44,9 +47,15 @@ export default function ItemDetailModal({ item, onClose, onSave }) {
       const reader = new FileReader();
       reader.onload = (event) => {
         setCustomImage(event.target.result);
+        setNoPhotoConfirmed(false);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleMarkNoPhoto = () => {
+    setCustomImage('');
+    setNoPhotoConfirmed(true);
   };
 
   const handleSubmit = (e) => {
@@ -59,7 +68,8 @@ export default function ItemDetailModal({ item, onClose, onSave }) {
       image: customImage,
       images: {
         ...item.images,
-        product: customImage
+        product: customImage,
+        noPhotoConfirmed: !customImage && noPhotoConfirmed
       }
     };
     onSave(updatedItem);
@@ -103,21 +113,26 @@ export default function ItemDetailModal({ item, onClose, onSave }) {
             <div className="md:col-span-5 space-y-3">
               <div className="w-full h-64 bg-slate-100 rounded-2xl border border-slate-200 overflow-hidden relative flex items-center justify-center group shadow-inner">
                 {imageSrc ? (
-                  <img 
-                    src={imageSrc} 
-                    alt={item.name} 
+                  <img
+                    src={imageSrc}
+                    alt={item.name}
                     className="w-full h-full object-cover"
                   />
+                ) : noPhotoConfirmed ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-slate-500 p-4 text-center">
+                    <ImageOff className="w-9 h-9 text-slate-400" strokeWidth={1.5} />
+                    <span className="text-xs font-bold">ยืนยันแล้วว่าไม่มีรูปภาพสำหรับรายการนี้</span>
+                  </div>
                 ) : (
                   <CategoryMockup category={item.category} size="large" />
                 )}
-                
+
                 {/* Upload Image Overlay */}
                 <label className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer p-4 text-center">
                   <Upload className="w-8 h-8 mb-2 text-amber-400" />
                   <span className="text-xs font-bold">คลิกเพื่อเปลี่ยนรูปภาพหลักฐาน</span>
-                  <input 
-                    type="file" 
+                  <input
+                    type="file"
                     accept="image/*"
                     onChange={handleImageUpload}
                     className="hidden"
@@ -125,18 +140,34 @@ export default function ItemDetailModal({ item, onClose, onSave }) {
                 </label>
               </div>
 
-              <div className="text-center">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 <label className="text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer inline-flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
                   <Upload className="w-3.5 h-3.5" />
                   <span>เปลี่ยนรูปภาพถ่ายพัสดุจริง</span>
-                  <input 
-                    type="file" 
+                  <input
+                    type="file"
                     accept="image/*"
                     onChange={handleImageUpload}
                     className="hidden"
                   />
                 </label>
+
+                {imageSrc || !noPhotoConfirmed ? (
+                  <button
+                    type="button"
+                    onClick={handleMarkNoPhoto}
+                    className="text-xs font-bold text-slate-500 hover:text-rose-700 cursor-pointer inline-flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 hover:border-rose-200 hover:bg-rose-50 transition-colors"
+                  >
+                    <ImageOff className="w-3.5 h-3.5" />
+                    <span>ไม่มีรูปภาพสำหรับรายการนี้</span>
+                  </button>
+                ) : null}
               </div>
+              {!imageSrc && noPhotoConfirmed && (
+                <p className="text-[11px] text-slate-500 text-center leading-relaxed">
+                  รายการนี้จะแสดงเป็น "ไม่มีภาพถ่ายประกอบ" ในรายงาน แทนการใช้รูปที่ไม่ตรงกับพัสดุจริง — อัปโหลดรูปได้ทุกเมื่อหากมีภาพในภายหลัง
+                </p>
+              )}
             </div>
 
             {/* Right: Item Info (7 cols) */}
