@@ -1,20 +1,19 @@
 import React, { useState } from 'react';
-import { Printer, Download, FileJson, FileSpreadsheet, Image as ImageIcon, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Printer, Download, FileJson, FileSpreadsheet, Image as ImageIcon, ImageOff, CheckCircle2, XCircle, Clock, Columns3, ChevronDown } from 'lucide-react';
 import { formatNumber } from '../utils/numberFormatter';
 import { getImageUrl } from '../utils/imageHelper';
 
-const GarudaEmblem = () => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    viewBox="0 0 100 100" 
-    className="w-20 h-20 mx-auto fill-slate-800 print:fill-black"
-  >
-    <path d="M50 5C53.4 9.1 56 12 56 16C56 18.5 53.6 20.3 50.5 20.3C47.4 20.3 45 18.5 45 16C45 12 47.6 9.1 50 5ZM50 21C55 21 59 23.5 61.2 27.5C62.5 26.5 64 26 65.5 26C68.5 26 71 28.5 71 31.5C71 33.2 70.2 34.8 69 35.8C73.5 39 77.2 43.5 79.5 49C77 48.5 74.5 48.2 72 48.2C68 48.2 64.5 49.5 61.5 51.5C63 53.5 64 56 64 58.5C64 64 58.5 69.5 50.5 69.5C42.5 69.5 37 64 37 58.5C37 56 38 53.5 39.5 51.5C36.5 49.5 33 48.2 29 48.2C26.5 48.2 24 48.5 21.5 49C23.8 43.5 27.5 39 32 35.8C30.8 34.8 30 33.2 30 31.5C30 28.5 32.5 26 35.5 26C37 26 38.5 26.5 39.8 27.5C42 23.5 46 21 50 21ZM50.5 70.5C57.5 70.5 63 75.5 63.5 81.5C61.5 81 59.2 80.5 56.5 80.5C53.5 80.5 51.2 81.5 50.5 82.5C49.8 81.5 47.5 80.5 44.5 80.5C41.8 80.5 39.5 81 37.5 81.5C38 75.5 43.5 70.5 50.5 70.5ZM50.5 83.5C53 83.5 54.5 84 55.5 84.5C53 86.5 51.5 88.5 50.5 91C49.5 88.5 48 86.5 45.5 84.5C46.5 84 48 83.5 50.5 83.5Z" />
-    <path d="M50 30C52.5 30 54.5 32 54.5 34.5C54.5 37 52.5 39 50 39C47.5 39 45.5 37 45.5 34.5C45.5 32 47.5 30 50 30Z" />
-  </svg>
-);
+const REPORT_COLUMNS = [
+  { key: 'no', label: 'ลำดับ', thClass: 'w-12' },
+  { key: 'name', label: 'รายการพัสดุและรายละเอียดคุณลักษณะ', thClass: 'text-left' },
+  { key: 'qty', label: 'จำนวน', thClass: 'w-16' },
+  { key: 'unit', label: 'หน่วย', thClass: 'w-16' },
+  { key: 'unitPrice', label: 'ราคา/หน่วย', thClass: 'w-28 text-right' },
+  { key: 'total', label: 'รวมเงิน (บาท)', thClass: 'w-32 text-right' },
+  { key: 'status', label: 'ผลตรวจ', thClass: 'w-20' },
+];
 
-export default function OfficialReport({ 
+export default function OfficialReport({
   items, 
   committee, 
   stats,
@@ -29,39 +28,88 @@ export default function OfficialReport({
   divisions
 }) {
   const [includePhotos, setIncludePhotos] = useState(true);
+  const [visibleColumns, setVisibleColumns] = useState(() =>
+    Object.fromEntries(REPORT_COLUMNS.map(c => [c.key, true]))
+  );
+  const [showColumnPicker, setShowColumnPicker] = useState(false);
+
+  const activeColumns = REPORT_COLUMNS.filter(c => visibleColumns[c.key]);
+
+  const toggleColumn = (key) => {
+    setVisibleColumns(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const renderCell = (key, item, idx) => {
+    switch (key) {
+      case 'no':
+        return <td key={key} className="px-3 py-3 text-center font-bold text-slate-800 print:text-black num-tabular text-sm">{idx + 1}</td>;
+      case 'name':
+        return (
+          <td key={key} className="px-3.5 py-3 text-left font-bold text-slate-900 print:text-black leading-normal text-sm">
+            {item.name}
+            {item.spec && (
+              <div className="text-xs font-normal text-slate-600 print:text-slate-700 mt-1 whitespace-pre-line leading-relaxed font-sans">
+                {item.spec}
+              </div>
+            )}
+            {item.notes && (
+              <div className="text-xs font-medium text-amber-900 bg-amber-50 print:bg-transparent px-2.5 py-1 mt-1.5 rounded border border-amber-200 print:border-none">
+                ข้อคิดเห็นการตรวจรับ: {item.notes}
+              </div>
+            )}
+          </td>
+        );
+      case 'qty':
+        return <td key={key} className="px-3 py-3 text-center font-bold text-slate-800 print:text-black num-tabular text-sm">{item.qty}</td>;
+      case 'unit':
+        return <td key={key} className="px-3 py-3 text-center font-medium text-slate-800 print:text-black text-sm">{item.unit}</td>;
+      case 'unitPrice':
+        return <td key={key} className="px-3 py-3 text-right font-medium text-slate-800 print:text-black num-tabular text-sm">{formatNumber(item.unit_price)}</td>;
+      case 'total':
+        return <td key={key} className="px-3 py-3 text-right font-bold text-slate-900 print:text-black num-tabular text-sm">{formatNumber(item.qty * item.unit_price)}</td>;
+      case 'status':
+        return (
+          <td key={key} className="px-3 py-3 text-center font-bold text-sm">
+            {item.inspectStatus === 'passed' ? (
+              <span className="text-emerald-700 print:text-black">ผ่าน</span>
+            ) : item.inspectStatus === 'failed' ? (
+              <span className="text-rose-700 print:text-black">ไม่ผ่าน</span>
+            ) : (
+              <span className="text-amber-600 print:text-black">รอตรวจ</span>
+            )}
+          </td>
+        );
+      default:
+        return null;
+    }
+  };
 
   const renderItemRows = () => {
     return items.map((item, idx) => (
       <tr key={item.id} className="border-b border-slate-300 print:border-slate-400 print-no-break">
-        <td className="px-3 py-3 text-center font-bold text-slate-800 print:text-black num-tabular text-sm">{idx + 1}</td>
-        <td className="px-3.5 py-3 text-left font-bold text-slate-900 print:text-black leading-normal text-sm">
-          {item.name}
-          {item.spec && (
-            <div className="text-xs font-normal text-slate-600 print:text-slate-700 mt-1 whitespace-pre-line leading-relaxed font-sans">
-              {item.spec}
-            </div>
-          )}
-          {item.notes && (
-            <div className="text-xs font-medium text-amber-900 bg-amber-50 print:bg-transparent px-2.5 py-1 mt-1.5 rounded border border-amber-200 print:border-none">
-              ข้อคิดเห็นการตรวจรับ: {item.notes}
-            </div>
-          )}
-        </td>
-        <td className="px-3 py-3 text-center font-bold text-slate-800 print:text-black num-tabular text-sm">{item.qty}</td>
-        <td className="px-3 py-3 text-center font-medium text-slate-800 print:text-black text-sm">{item.unit}</td>
-        <td className="px-3 py-3 text-right font-medium text-slate-800 print:text-black num-tabular text-sm">{formatNumber(item.unit_price)}</td>
-        <td className="px-3 py-3 text-right font-bold text-slate-900 print:text-black num-tabular text-sm">{formatNumber(item.qty * item.unit_price)}</td>
-        <td className="px-3 py-3 text-center font-bold text-sm">
-          {item.inspectStatus === 'passed' ? (
-            <span className="text-emerald-700 print:text-black">ผ่าน</span>
-          ) : item.inspectStatus === 'failed' ? (
-            <span className="text-rose-700 print:text-black">ไม่ผ่าน</span>
-          ) : (
-            <span className="text-amber-600 print:text-black">รอตรวจ</span>
-          )}
-        </td>
+        {activeColumns.map(col => renderCell(col.key, item, idx))}
       </tr>
     ));
+  };
+
+  const renderGrandTotalRow = () => {
+    const totalIdx = activeColumns.findIndex(c => c.key === 'total');
+    const labelSpan = totalIdx === -1 ? activeColumns.length : totalIdx;
+    const cells = [
+      <td key="label" colSpan={labelSpan} className="px-3.5 py-4 text-right">
+        รวมงบประมาณจัดซื้อทั้งสิ้น: {stats.totalItems} รายการ
+        {totalIdx === -1 && <span className="ml-2">({formatNumber(stats.totalBudget)} บาท)</span>}
+      </td>
+    ];
+    if (totalIdx !== -1) {
+      cells.push(
+        <td key="total" className="px-3 py-4 text-right num-tabular font-black">{formatNumber(stats.totalBudget)}</td>
+      );
+      for (let i = totalIdx + 1; i < activeColumns.length; i++) {
+        cells.push(<td key={activeColumns[i].key} className="px-3 py-4"></td>);
+      }
+    }
+    return cells;
   };
 
   return (
@@ -98,7 +146,7 @@ export default function OfficialReport({
 
           {/* Attach Evidence Photos Toggle */}
           <label className="flex items-center gap-2 cursor-pointer bg-slate-50 border border-slate-300 px-3.5 py-2 rounded-xl text-sm font-bold text-slate-800 hover:bg-slate-100 transition-colors">
-            <input 
+            <input
               type="checkbox"
               checked={includePhotos}
               onChange={(e) => setIncludePhotos(e.target.checked)}
@@ -107,6 +155,38 @@ export default function OfficialReport({
             <ImageIcon className="w-4 h-4 text-slate-600" />
             <span>แนบรูปภาพหลักฐานพัสดุประกอบรายงาน</span>
           </label>
+
+          {/* Column Visibility Picker */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowColumnPicker(v => !v)}
+              className="flex items-center gap-2 bg-slate-50 border border-slate-300 px-3.5 py-2 rounded-xl text-sm font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              <Columns3 className="w-4 h-4 text-slate-600" />
+              <span>คอลัมน์ที่พิมพ์ ({activeColumns.length}/{REPORT_COLUMNS.length})</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform ${showColumnPicker ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showColumnPicker && (
+              <div className="absolute z-20 top-full mt-2 left-0 bg-white border border-slate-200 rounded-xl shadow-lg p-2 w-64">
+                {REPORT_COLUMNS.map(col => (
+                  <label
+                    key={col.key}
+                    className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm font-medium text-slate-800 hover:bg-slate-50 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={visibleColumns[col.key]}
+                      onChange={() => toggleColumn(col.key)}
+                      className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
+                    />
+                    <span>{col.label}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Export Buttons */}
@@ -151,7 +231,6 @@ export default function OfficialReport({
         
         {/* Document Official Header */}
         <div className="text-center space-y-4 pb-6 border-b-2 border-slate-900">
-          <GarudaEmblem />
           <h1 className="text-xl sm:text-2xl font-bold tracking-wide">รายงานการตรวจรับพัสดุคอมพิวเตอร์</h1>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-left max-w-2xl mx-auto pt-3 leading-relaxed font-sans">
@@ -185,26 +264,32 @@ export default function OfficialReport({
           <table className="w-full text-sm text-left border-collapse font-sans">
             <thead>
               <tr className="border-b-2 border-slate-900 text-center font-bold bg-slate-50 print:bg-transparent">
-                <th className="px-3 py-3 w-12">ลำดับ</th>
-                <th className="px-3.5 py-3 text-left">รายการพัสดุและรายละเอียดคุณลักษณะ</th>
-                <th className="px-3 py-3 w-16">จำนวน</th>
-                <th className="px-3 py-3 w-16">หน่วย</th>
-                <th className="px-3 py-3 w-28 text-right">ราคา/หน่วย</th>
-                <th className="px-3 py-3 w-32 text-right">รวมเงิน (บาท)</th>
-                <th className="px-3 py-3 w-20">ผลตรวจ</th>
+                {activeColumns.length === 0 ? (
+                  <th className="px-3 py-3">ไม่ได้เลือกคอลัมน์ที่จะแสดง</th>
+                ) : (
+                  activeColumns.map(col => (
+                    <th key={col.key} className={`px-3 py-3 ${col.thClass || ''}`}>{col.label}</th>
+                  ))
+                )}
               </tr>
             </thead>
             <tbody>
-              {renderItemRows()}
+              {activeColumns.length === 0 ? (
+                <tr>
+                  <td className="px-3 py-6 text-center text-slate-500 text-sm">
+                    กรุณาเลือกอย่างน้อย 1 คอลัมน์จากปุ่ม "คอลัมน์ที่พิมพ์" ด้านบน
+                  </td>
+                </tr>
+              ) : (
+                renderItemRows()
+              )}
               
               {/* Grand Total Row */}
-              <tr className="border-t-2 border-slate-900 font-bold bg-slate-50 print:bg-transparent text-base">
-                <td colSpan={2} className="px-3.5 py-4 text-right">รวมงบประมาณจัดซื้อทั้งสิ้น:</td>
-                <td colSpan={2} className="px-3 py-4 text-center">{stats.totalItems} รายการ</td>
-                <td className="px-3 py-4"></td>
-                <td className="px-3 py-4 text-right num-tabular font-black">{formatNumber(stats.totalBudget)}</td>
-                <td className="px-3 py-4"></td>
-              </tr>
+              {activeColumns.length > 0 && (
+                <tr className="border-t-2 border-slate-900 font-bold bg-slate-50 print:bg-transparent text-base">
+                  {renderGrandTotalRow()}
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -269,15 +354,22 @@ export default function OfficialReport({
                       </div>
 
                       {/* Photo Container */}
-                      <div className="w-full h-48 bg-slate-100 rounded-lg overflow-hidden border border-slate-300 flex items-center justify-center relative mb-3">
+                      <div className={`w-full h-48 rounded-lg overflow-hidden flex items-center justify-center relative mb-3 ${
+                        img
+                          ? 'border border-slate-300 bg-slate-100'
+                          : 'border-2 border-dashed border-slate-300 print:border-slate-500 bg-slate-50 print:bg-transparent'
+                      }`}>
                         {img ? (
-                          <img 
-                            src={img} 
+                          <img
+                            src={img}
                             alt={item.name}
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="text-slate-400 text-xs font-medium">ไม่มีรูปภาพพัสดุ</div>
+                          <div className="flex flex-col items-center justify-center gap-2 text-center px-4">
+                            <ImageOff className="w-7 h-7 text-slate-400 print:text-slate-600" strokeWidth={1.5} />
+                            <span className="text-xs font-bold text-slate-500 print:text-slate-700 tracking-wide">ไม่มีภาพถ่ายประกอบ</span>
+                          </div>
                         )}
                       </div>
 
