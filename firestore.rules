@@ -1,0 +1,33 @@
+rules_version = '2';
+
+// Access model chosen for this deployment: anyone holding the app link can read and
+// write the shared inspection workspace (same practical reach as the app's existing
+// "share link" feature). Access is still scoped to the one known workspace path --
+// no other collection in the project is reachable from the web client.
+//
+// If this ever needs tightening, the intended upgrade is Google sign-in with an
+// allow-list of committee e-mails checked here (request.auth.token.email in [...]).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /projects/{projectId} {
+      allow read: if projectId == 'main';
+      allow write: if projectId == 'main'
+                   && request.resource.data.size() < 50;
+
+      // Covers:
+      //   items/{itemId}                  one document per inspection item, so two
+      //                                   committee members editing two different
+      //                                   items never overwrite each other
+      //   backups/{backupId}[/items/...]  automatic pre-destructive-operation snapshots
+      //   events/{eventId}                project activity log
+      match /{document=**} {
+        allow read, write: if projectId == 'main';
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

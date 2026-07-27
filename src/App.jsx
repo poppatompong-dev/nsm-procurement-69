@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import {
   PackageCheck,
   FileText,
   Settings,
@@ -18,9 +18,17 @@ import {
   Check,
   Building,
   Calendar,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Cloud,
+  CloudOff,
+  CloudUpload,
+  CloudDownload,
+  RefreshCw,
+  AlertTriangle,
+  History
 } from 'lucide-react';
 import { inspectionRepository } from './utils/inspectionRepository';
+import { cloudSync } from './utils/cloudSync';
 
 // Import initial dataset
 import initialProcurementData from './data/procurementData.json';
@@ -34,6 +42,7 @@ import ExcelImporter from './components/ExcelImporter';
 import ShareModal from './components/ShareModal';
 import ImageMappingManager from './components/ImageMappingManager';
 import ResetConfirmModal from './components/ResetConfirmModal';
+import ConfirmActionModal from './components/ConfirmActionModal';
 
 // Import utilities
 import { parseUrlState, generateShareLink } from './utils/stateCompressor';
@@ -44,6 +53,35 @@ const DEFAULT_COMMITTEE = [
   { name: 'นายปฐมพงษ์ หล้ามหศักดิ์', position: 'กรรมการตรวจรับ (นักวิชาการคอมพิวเตอร์ปฏิบัติการ)' },
   { name: 'นายประชารักษ์ ประทุมโทน', position: 'กรรมการตรวจรับ (นักประชาสัมพันธ์ปฏิบัติการ)' }
 ];
+
+const SYNC_VIEW = {
+  idle: { label: 'กำลังเริ่มระบบซิงก์...', className: 'bg-slate-100 text-slate-600 border-slate-200', Icon: RefreshCw },
+  connecting: { label: 'กำลังเชื่อมต่อคลาวด์...', className: 'bg-sky-50 text-sky-700 border-sky-200', Icon: RefreshCw },
+  saving: { label: 'กำลังบันทึกขึ้นคลาวด์...', className: 'bg-amber-50 text-amber-700 border-amber-200', Icon: CloudUpload },
+  synced: { label: 'ซิงก์ข้อมูลกับคลาวด์แล้ว', className: 'bg-emerald-50 text-emerald-700 border-emerald-200', Icon: Cloud },
+  offline: { label: 'ออฟไลน์ — บันทึกไว้ในเครื่องก่อน', className: 'bg-slate-100 text-slate-600 border-slate-300', Icon: CloudOff },
+  error: { label: 'ซิงก์คลาวด์ผิดพลาด', className: 'bg-rose-50 text-rose-700 border-rose-200', Icon: AlertTriangle }
+};
+
+const formatBackupTime = (iso) => {
+  if (!iso) return 'ไม่ทราบเวลา';
+  try {
+    return new Date(iso).toLocaleString('th-TH', {
+      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+  } catch {
+    return iso;
+  }
+};
+
+const formatSyncTime = (iso) => {
+  if (!iso) return null;
+  try {
+    return new Date(iso).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return null;
+  }
+};
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('inspection'); // 'inspection' | 'report' | 'settings'
@@ -88,6 +126,22 @@ export default function App() {
   const [activeProjectId, setActiveProjectId] = useState(null);
   const [projectConfig, setProjectConfig] = useState(null);
 
+  // Cloud sync state
+  const [syncStatus, setSyncStatus] = useState('idle');
+  const [lastSyncAt, setLastSyncAt] = useState(null);
+  const [isSyncBusy, setIsSyncBusy] = useState(false);
+  const [cloudBackups, setCloudBackups] = useState([]);
+
+  // Operations that rewrite the item list for every device at once are gated behind
+  // an explicit confirmation instead of happening the instant a file is dropped.
+  const [pendingImport, setPendingImport] = useState(null);
+  const [pendingRestore, setPendingRestore] = useState(null);
+
+  // Remote committee updates must not yank the form out from under someone who is
+  // mid-edit, so the listener reads the live editing flag through a ref.
+  const isEditingCommitteeRef = useRef(false);
+  useEffect(() => { isEditingCommitteeRef.current = isEditingCommittee; }, [isEditingCommittee]);
+
   // Boot Effect
   useEffect(() => {
     inspectionRepository.migrateToMultiProject();
@@ -122,6 +176,38 @@ export default function App() {
     setEditedCommittee(currentCommittee);
     setItems(currentItems);
     setHasResetBackup(inspectionRepository.hasResetBackup(pid));
+
+    // Connect to the shared cloud workspace. Until the first server snapshot lands,
+    // cloudSync ignores outgoing writes, so this device's (possibly stale) local copy
+    // can never overwrite what other devices already saved.
+    cloudSync.start({
+      items: currentItems,
+      committee: currentCommittee,
+      config: inspectionRepository.getProjectConfig(pid),
+      onItems: (remoteItems) => setItems(remoteItems),
+      onMeta: ({ committee: remoteCommittee, config: remoteConfig }) => {
+        if (Array.isArray(remoteCommittee) && remoteCommittee.length > 0) {
+          setCommittee(remoteCommittee);
+          if (!isEditingCommitteeRef.current) setEditedCommittee(remoteCommittee);
+          inspectionRepository.saveCommittee(remoteCommittee, pid);
+        }
+        if (remoteConfig && typeof remoteConfig === 'object') {
+          setProjectConfig(remoteConfig);
+          inspectionRepository.saveProjectConfig(remoteConfig, pid);
+        }
+      },
+      onStatus: (status, syncedAt) => {
+        setSyncStatus(status);
+        if (syncedAt) setLastSyncAt(syncedAt);
+      },
+      onNotice: (kind, count) => {
+        if (kind === 'seeded') {
+          showToast(`☁️ อัปโหลดข้อมูล ${count} รายการจากเครื่องนี้ขึ้นคลาวด์เป็นชุดตั้งต้นแล้ว`);
+        } else if (kind === 'adopted') {
+          showToast(`☁️ ดึงข้อมูลล่าสุดจากคลาวด์ ${count} รายการมาแสดงแล้ว (ข้อมูลเดิมในเครื่องถูกสำรองไว้)`);
+        }
+      }
+    });
   }, []);
 
   const showToast = (msg, action = null) => {
@@ -277,7 +363,14 @@ export default function App() {
     showToast('💾 บันทึกรายชื่อคณะกรรมการเรียบร้อย');
   };
 
-  const confirmResetDatabase = () => {
+  const confirmResetDatabase = async () => {
+    // Snapshot the shared workspace to the cloud first: a reset here wipes the record
+    // on every device, not just this one.
+    try {
+      await cloudSync.backupWorkspace('ก่อนรีเซ็ตข้อมูลโครงการ');
+    } catch (e) {
+      console.error('Pre-reset cloud backup failed', e);
+    }
     const ok = inspectionRepository.resetAll(activeProjectId);
     if (ok) {
       setItems(initialProcurementData);
@@ -304,11 +397,115 @@ export default function App() {
     showToast('↩️ เรียกคืนข้อมูลก่อนการรีเซ็ตเรียบร้อยแล้ว');
   };
 
+  // Recovery escape hatches for the rare case the two copies diverge (e.g. a device
+  // that was edited while offline). Deliberately manual -- automatic merging of two
+  // divergent inspection records is not something to guess at.
+  const handleForcePushToCloud = async () => {
+    setIsSyncBusy(true);
+    try {
+      await cloudSync.forcePush({
+        items,
+        committee,
+        config: projectConfig || inspectionRepository.getProjectConfig(activeProjectId)
+      });
+      showToast('☁️ อัปโหลดข้อมูลจากเครื่องนี้ทับข้อมูลบนคลาวด์เรียบร้อยแล้ว');
+    } catch (e) {
+      console.error('Force push failed', e);
+      showToast(`⚠️ อัปโหลดขึ้นคลาวด์ไม่สำเร็จ: ${e?.message || 'ไม่ทราบสาเหตุ'}`);
+    } finally {
+      setIsSyncBusy(false);
+    }
+  };
+
+  const handleForcePullFromCloud = async () => {
+    setIsSyncBusy(true);
+    try {
+      const remote = await cloudSync.forcePull();
+      if (Array.isArray(remote.items)) {
+        setItems(remote.items);
+        inspectionRepository.saveItems(remote.items, activeProjectId);
+      }
+      if (Array.isArray(remote.committee) && remote.committee.length > 0) {
+        setCommittee(remote.committee);
+        setEditedCommittee(remote.committee);
+        inspectionRepository.saveCommittee(remote.committee, activeProjectId);
+      }
+      if (remote.config) {
+        setProjectConfig(remote.config);
+        inspectionRepository.saveProjectConfig(remote.config, activeProjectId);
+      }
+      showToast(`☁️ ดึงข้อมูลล่าสุดจากคลาวด์ ${remote.items?.length || 0} รายการเรียบร้อยแล้ว`);
+    } catch (e) {
+      console.error('Force pull failed', e);
+      showToast(`⚠️ ดึงข้อมูลจากคลาวด์ไม่สำเร็จ: ${e?.message || 'ไม่ทราบสาเหตุ'}`);
+    } finally {
+      setIsSyncBusy(false);
+    }
+  };
+
+  const refreshCloudBackups = async () => {
+    try {
+      setCloudBackups(await cloudSync.listBackups());
+    } catch (e) {
+      console.error('Failed to list cloud backups', e);
+    }
+  };
+
+  // Load the backup list whenever the settings tab is opened on a synced connection.
+  useEffect(() => {
+    if (activeTab === 'settings' && (syncStatus === 'synced' || syncStatus === 'saving')) {
+      refreshCloudBackups();
+    }
+  }, [activeTab, syncStatus]);
+
+  // An Excel import replaces the whole item list -- on every device at once. Never
+  // apply it straight from the file drop; stage it and make the cost explicit first.
   const handleImportExcel = (newItems) => {
+    if (items.length === 0) {
+      applyImportedItems(newItems);
+      return;
+    }
+    setPendingImport(newItems);
+  };
+
+  const applyImportedItems = async (newItems) => {
+    setIsSyncBusy(true);
+    try {
+      await cloudSync.backupWorkspace(`ก่อนนำเข้า Excel (${newItems.length} รายการ)`);
+    } catch (e) {
+      console.error('Pre-import cloud backup failed', e);
+    }
     setItems(newItems);
     inspectionRepository.saveItems(newItems, activeProjectId);
-    showToast(`🟢 นำเข้าพัสดุใหม่ ${newItems.length} รายการสำเร็จ`);
+    setPendingImport(null);
+    setIsSyncBusy(false);
+    showToast(`🟢 นำเข้าพัสดุใหม่ ${newItems.length} รายการสำเร็จ (สำรองข้อมูลเดิมไว้บนคลาวด์แล้ว)`);
     setActiveTab('inspection');
+    refreshCloudBackups();
+  };
+
+  const applyRestoreBackup = async (backup) => {
+    setIsSyncBusy(true);
+    try {
+      const restored = await cloudSync.restoreBackup(backup.id);
+      if (Array.isArray(restored.items)) {
+        setItems(restored.items);
+        inspectionRepository.saveItems(restored.items, activeProjectId);
+      }
+      if (Array.isArray(restored.committee) && restored.committee.length > 0) {
+        setCommittee(restored.committee);
+        setEditedCommittee(restored.committee);
+        inspectionRepository.saveCommittee(restored.committee, activeProjectId);
+      }
+      showToast(`↩️ กู้คืนข้อมูลสำรอง ${restored.items?.length || 0} รายการเรียบร้อย (ทุกเครื่องจะอัปเดตทันที)`);
+      refreshCloudBackups();
+    } catch (e) {
+      console.error('Restore failed', e);
+      showToast(`⚠️ กู้คืนข้อมูลสำรองไม่สำเร็จ: ${e?.message || 'ไม่ทราบสาเหตุ'}`);
+    } finally {
+      setPendingRestore(null);
+      setIsSyncBusy(false);
+    }
   };
 
   const handleExportCSV = () => {
@@ -461,6 +658,23 @@ export default function App() {
               คำสั่งเทศบาลนครนครสวรรค์ ที่ ๘๖๔/๒๕๖๙ (งบประมาณ พ.ศ. 2569)
             </p>
           </div>
+
+          {/* Cloud Sync Status */}
+          {(() => {
+            const view = SYNC_VIEW[syncStatus] || SYNC_VIEW.idle;
+            const SyncIcon = view.Icon;
+            const time = formatSyncTime(lastSyncAt);
+            return (
+              <div
+                className={`flex items-center gap-2 px-3 py-2 rounded-2xl border text-xs font-bold ${view.className}`}
+                title={time ? `ซิงก์ล่าสุดเมื่อ ${time} น.` : 'ยังไม่มีการซิงก์'}
+              >
+                <SyncIcon className={`w-4 h-4 shrink-0 ${syncStatus === 'connecting' || syncStatus === 'idle' ? 'animate-spin' : ''}`} />
+                <span>{view.label}</span>
+                {time && syncStatus === 'synced' && <span className="font-medium opacity-70">({time} น.)</span>}
+              </div>
+            );
+          })()}
 
           {/* Quick Progress Indicator */}
           <div className="flex items-center gap-6 bg-slate-50 px-4 py-2 rounded-2xl border border-slate-200">
@@ -695,9 +909,107 @@ export default function App() {
                   <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-2">
                     <FileSpreadsheet className="w-6 h-6 text-slate-700" />
                     <h4 className="font-bold text-base text-slate-900">นำเข้าสเปกพัสดุจากไฟล์ Excel</h4>
-                    <ExcelImporter onImportSuccess={handleImportExcel} />
+                    <ExcelImporter onImport={handleImportExcel} />
                   </div>
                 </div>
+              </div>
+
+              {/* Cloud Sync Card */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                  <div className="flex items-center gap-2">
+                    <Cloud className="w-5 h-5 text-slate-700" />
+                    <h3 className="text-lg font-bold text-slate-900">การซิงก์ข้อมูลข้ามเครื่อง (Cloud Sync)</h3>
+                  </div>
+                  {(() => {
+                    const view = SYNC_VIEW[syncStatus] || SYNC_VIEW.idle;
+                    return (
+                      <span className={`px-3 py-1.5 rounded-xl border text-xs font-bold ${view.className}`}>
+                        {view.label}
+                      </span>
+                    );
+                  })()}
+                </div>
+
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  ข้อมูลการตรวจรับทั้งหมดถูกบันทึกไว้บนฐานข้อมูลกลาง (Cloud Firestore) และซิงก์อัตโนมัติแบบเรียลไทม์
+                  ทุกเครื่องที่เปิดลิงก์เดียวกันจะเห็นข้อมูลชุดเดียวกันทันที หากออฟไลน์ ระบบจะบันทึกในเครื่องไว้ก่อนแล้วส่งขึ้นคลาวด์ให้เมื่อกลับมาออนไลน์
+                  {lastSyncAt && <> — ซิงก์ล่าสุดเมื่อเวลา <span className="font-bold">{formatSyncTime(lastSyncAt)} น.</span></>}
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <button
+                    onClick={handleForcePushToCloud}
+                    disabled={isSyncBusy || syncStatus === 'offline'}
+                    className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <CloudUpload className="w-6 h-6 text-slate-700 shrink-0" />
+                    <span>
+                      <span className="block font-bold text-sm text-slate-900">อัปโหลดข้อมูลเครื่องนี้ทับคลาวด์</span>
+                      <span className="block text-xs text-slate-600 mt-0.5">ใช้เมื่อเครื่องนี้มีข้อมูลที่ถูกต้องล่าสุด</span>
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={handleForcePullFromCloud}
+                    disabled={isSyncBusy}
+                    className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <CloudDownload className="w-6 h-6 text-slate-700 shrink-0" />
+                    <span>
+                      <span className="block font-bold text-sm text-slate-900">ดึงข้อมูลล่าสุดจากคลาวด์</span>
+                      <span className="block text-xs text-slate-600 mt-0.5">ใช้เมื่อสงสัยว่าหน้าจอนี้แสดงข้อมูลเก่า</span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Cloud Backup & Restore */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                  <div className="flex items-center gap-2">
+                    <History className="w-5 h-5 text-slate-700" />
+                    <h3 className="text-lg font-bold text-slate-900">ข้อมูลสำรองบนคลาวด์ (กู้คืนย้อนหลังได้)</h3>
+                  </div>
+                  <button
+                    onClick={refreshCloudBackups}
+                    className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 transition-colors cursor-pointer"
+                  >
+                    รีเฟรชรายการ
+                  </button>
+                </div>
+
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  ระบบจะสำรองข้อมูลทั้งชุดขึ้นคลาวด์ให้อัตโนมัติ<span className="font-bold">ก่อน</span>ทุกครั้งที่มีการนำเข้า Excel ใหม่ รีเซ็ตข้อมูล หรืออัปโหลดทับ
+                  จึงกู้คืนได้จากทุกเครื่อง แม้คนที่ทำข้อมูลหายจะใช้อีกเครื่องหนึ่งก็ตาม (เก็บย้อนหลัง 10 ชุดล่าสุด)
+                </p>
+
+                {cloudBackups.length === 0 ? (
+                  <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                    ยังไม่มีข้อมูลสำรอง — ระบบจะสร้างให้เองอัตโนมัติเมื่อมีการดำเนินการที่เสี่ยงต่อข้อมูลเดิม
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {cloudBackups.map(backup => (
+                      <div key={backup.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-slate-900 truncate">{backup.label}</p>
+                          <p className="text-xs text-slate-500">
+                            {formatBackupTime(backup.createdAtIso)} — {backup.itemCount} รายการ
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setPendingRestore(backup)}
+                          disabled={isSyncBusy}
+                          className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 bg-white border border-slate-300 hover:bg-slate-900 hover:text-white hover:border-slate-900 text-slate-800 rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          <Undo2 className="w-4 h-4" />
+                          กู้คืนชุดนี้
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Danger Zone: Reset */}
@@ -771,6 +1083,31 @@ export default function App() {
           isOpen={isShareModalOpen}
           onClose={() => setIsShareModalOpen(false)}
           generateLink={() => generateShareLink(committee, items, {}, { id: activeProjectId })}
+        />
+      )}
+
+      {pendingImport && (
+        <ConfirmActionModal
+          title="ยืนยันการนำเข้ารายการพัสดุชุดใหม่"
+          message={`ไฟล์นี้จะแทนที่รายการพัสดุเดิมทั้งหมด ${items.length} รายการ ด้วยรายการใหม่ ${pendingImport.length} รายการ`}
+          detail="⚠️ ข้อมูลนี้ใช้ร่วมกันทุกเครื่อง — ผลการตรวจรับ รูปภาพหลักฐาน และหมายเหตุของรายการเดิมจะหายไปจากหน้าจอของกรรมการทุกท่านพร้อมกัน ระบบจะสำรองข้อมูลชุดเดิมขึ้นคลาวด์ให้ก่อนโดยอัตโนมัติ และกู้คืนได้ที่หัวข้อ 'ข้อมูลสำรองบนคลาวด์' ในหน้าตั้งค่า"
+          confirmLabel={`นำเข้าทับ ${pendingImport.length} รายการ`}
+          tone="danger"
+          isBusy={isSyncBusy}
+          onConfirm={() => applyImportedItems(pendingImport)}
+          onClose={() => setPendingImport(null)}
+        />
+      )}
+
+      {pendingRestore && (
+        <ConfirmActionModal
+          title="ยืนยันการกู้คืนข้อมูลสำรอง"
+          message={`กู้คืนข้อมูลชุด "${pendingRestore.label}" (${pendingRestore.itemCount} รายการ) เมื่อ ${formatBackupTime(pendingRestore.createdAtIso)}`}
+          detail="ข้อมูลปัจจุบันจะถูกสำรองไว้อีกชุดหนึ่งก่อนกู้คืน จึงย้อนกลับมาได้เสมอ — และเมื่อกู้คืนแล้ว หน้าจอของทุกเครื่องจะอัปเดตตามทันที"
+          confirmLabel="กู้คืนข้อมูลชุดนี้"
+          isBusy={isSyncBusy}
+          onConfirm={() => applyRestoreBackup(pendingRestore)}
+          onClose={() => setPendingRestore(null)}
         />
       )}
 

@@ -14,6 +14,7 @@ import {
   ImageOff
 } from 'lucide-react';
 import { formatNumber } from '../utils/numberFormatter';
+import { readImageAsDownscaledDataUrl } from '../utils/imageHelper';
 import CategoryMockup from './CategoryMockup';
 
 export default function ItemDetailModal({ item, onClose, onSave }) {
@@ -43,14 +44,13 @@ export default function ItemDetailModal({ item, onClose, onSave }) {
 
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setCustomImage(event.target.result);
+    if (!file) return;
+    readImageAsDownscaledDataUrl(file)
+      .then(dataUrl => {
+        setCustomImage(dataUrl);
         setNoPhotoConfirmed(false);
-      };
-      reader.readAsDataURL(file);
-    }
+      })
+      .catch(err => console.error('Failed to read uploaded image', err));
   };
 
   const handleMarkNoPhoto = () => {

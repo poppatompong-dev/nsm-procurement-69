@@ -1,5 +1,6 @@
 import defaultTemplates from '../data/inspectionTemplates.json';
 import initialProcurementData from '../data/procurementData.json';
+import { cloudSync } from './cloudSync';
 
 const STORAGE_KEYS = {
   ITEMS: 'procurement_items_v4',
@@ -384,6 +385,7 @@ export const inspectionRepository = {
     if (!pid) return false;
     try {
       localStorage.setItem(projectConfigKey(pid), JSON.stringify(config));
+      cloudSync.pushConfig(config);
       return true;
     } catch (e) {
       console.error('Failed to save project config', e);
@@ -466,6 +468,10 @@ export const inspectionRepository = {
     if (!pid) return false;
     try {
       localStorage.setItem(projectItemsKey(pid), JSON.stringify(items));
+      // localStorage is only the offline mirror now -- the shared cloud copy is what
+      // makes the same data show up on every device. pushItems is a no-op diff when
+      // nothing actually changed, so this is safe to call on every save.
+      cloudSync.pushItems(items);
       return true;
     } catch (e) {
       console.error('Failed to save items', e);
@@ -493,6 +499,10 @@ export const inspectionRepository = {
       localStorage.removeItem(projectItemsKey(pid));
       localStorage.removeItem(projectCommitteeKey(pid));
       localStorage.removeItem(projectConfigKey(pid));
+      // Items are re-pushed by the caller (which sets state back to the seed data);
+      // committee/config have no such path, so mirror the reset to the cloud here.
+      cloudSync.pushCommittee(DEFAULT_COMMITTEE);
+      cloudSync.pushConfig(DEFAULT_PROJECT_CONFIG);
       inspectionRepository.logProjectEvent(pid, { type: 'reset', message: 'รีเซ็ตข้อมูลโครงการกลับเป็นค่าเริ่มต้น (สำรองข้อมูลเดิมไว้ให้กู้คืนได้)' });
       return true;
     } catch (e) {
@@ -525,6 +535,9 @@ export const inspectionRepository = {
       localStorage.setItem(projectCommitteeKey(pid), JSON.stringify(backup.committee || DEFAULT_COMMITTEE));
       localStorage.setItem(projectConfigKey(pid), JSON.stringify(backup.config || DEFAULT_PROJECT_CONFIG));
       localStorage.removeItem(projectResetBackupKey(pid));
+      cloudSync.pushItems(backup.items || []);
+      cloudSync.pushCommittee(backup.committee || DEFAULT_COMMITTEE);
+      cloudSync.pushConfig(backup.config || DEFAULT_PROJECT_CONFIG);
       inspectionRepository.logProjectEvent(pid, { type: 'undo_reset', message: 'เรียกคืนข้อมูลก่อนการรีเซ็ตล่าสุด' });
       return true;
     } catch (e) {
@@ -555,6 +568,7 @@ export const inspectionRepository = {
     if (!pid) return false;
     try {
       localStorage.setItem(projectCommitteeKey(pid), JSON.stringify(committee));
+      cloudSync.pushCommittee(committee);
       return true;
     } catch (e) {
       console.error('Failed to save committee members', e);
