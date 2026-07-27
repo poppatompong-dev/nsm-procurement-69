@@ -1,18 +1,25 @@
 rules_version = '2';
 
 // Access model chosen for this deployment: anyone holding the app link can read and
-// write the shared inspection workspace (same practical reach as the app's existing
-// "share link" feature). Access is still scoped to the one known workspace path --
-// no other collection in the project is reachable from the web client.
+// write a known inspection workspace (same practical reach as the app's existing
+// "share link" feature). Access is still scoped to workspace paths this app itself
+// creates -- no other collection in the project is reachable from the web client.
 //
-// If this ever needs tightening, the intended upgrade is Google sign-in with an
-// allow-list of committee e-mails checked here (request.auth.token.email in [...]).
+// This is now a personal multi-project Portal (one workspace per inspection project),
+// not a single shared workspace. 'main' is the original project's workspace, kept as
+// a literal id since its data already lives there; every later project gets its own
+// workspace named after its generated id, which always looks like `proj_<...>`
+// (see generateProjectId() in src/utils/inspectionRepository.js) -- so the id format
+// itself is the allow-list, not a guessable/enumerable value.
+//
+// If this ever needs tightening further, the intended upgrade is Google sign-in with
+// an allow-list of committee e-mails checked here (request.auth.token.email in [...]).
 service cloud.firestore {
   match /databases/{database}/documents {
 
     match /projects/{projectId} {
-      allow read: if projectId == 'main';
-      allow write: if projectId == 'main'
+      allow read: if projectId == 'main' || projectId.matches('proj_.*');
+      allow write: if (projectId == 'main' || projectId.matches('proj_.*'))
                    && request.resource.data.size() < 50;
 
       // Covers:
@@ -22,7 +29,7 @@ service cloud.firestore {
       //   backups/{backupId}[/items/...]  automatic pre-destructive-operation snapshots
       //   events/{eventId}                project activity log
       match /{document=**} {
-        allow read, write: if projectId == 'main';
+        allow read, write: if projectId == 'main' || projectId.matches('proj_.*');
       }
     }
 

@@ -15,7 +15,7 @@ import { inspectionRepository } from '../utils/inspectionRepository';
 import { formatNumber } from '../utils/numberFormatter';
 import { getImageUrl } from '../utils/imageHelper';
 
-export default function ImageMappingManager({ items = [], onUpdateItems, onSaveAll, onClose }) {
+export default function ImageMappingManager({ items = [], onUpdateItems, onSaveAll, onClose, isLegacyProject = false }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPreviewImage, setSelectedPreviewImage] = useState(null);
   const [toast, setToast] = useState('');
@@ -80,7 +80,7 @@ export default function ImageMappingManager({ items = [], onUpdateItems, onSaveA
                 ระบบจัดการจับคู่รูปภาพพัสดุจริง (Image Mapping Audit)
               </h2>
               <p className="text-xs text-slate-300 font-medium">
-                ตรวจสอบและจับคู่รูปภาพพัสดุจากคำสั่งจัดซื้อ 49 รายการ (สถานะปัจจุบัน: {matchedCount}/{itemList.length} รายการ)
+                ตรวจสอบและจับคู่รูปภาพพัสดุจากคำสั่งจัดซื้อ (สถานะปัจจุบัน: {matchedCount}/{itemList.length} รายการ)
               </p>
             </div>
           </div>
@@ -107,13 +107,15 @@ export default function ImageMappingManager({ items = [], onUpdateItems, onSaveA
           </div>
 
           <div className="flex gap-2.5 w-full sm:w-auto">
-            <button
-              onClick={handleAutoMatchAll}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow transition-colors cursor-pointer"
-            >
-              <Zap className="w-4 h-4" />
-              <span>รีเซ็ตจับคู่อัตโนมัติ 100% (49 รายการ)</span>
-            </button>
+            {isLegacyProject && (
+              <button
+                onClick={handleAutoMatchAll}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow transition-colors cursor-pointer"
+              >
+                <Zap className="w-4 h-4" />
+                <span>รีเซ็ตจับคู่อัตโนมัติ 100% (49 รายการ)</span>
+              </button>
+            )}
 
             <button
               onClick={handleExportJSON}

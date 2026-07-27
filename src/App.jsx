@@ -25,7 +25,8 @@ import {
   CloudDownload,
   RefreshCw,
   AlertTriangle,
-  History
+  History,
+  FolderKanban
 } from 'lucide-react';
 import { inspectionRepository } from './utils/inspectionRepository';
 import { cloudSync } from './utils/cloudSync';
@@ -43,6 +44,7 @@ import ShareModal from './components/ShareModal';
 import ImageMappingManager from './components/ImageMappingManager';
 import ResetConfirmModal from './components/ResetConfirmModal';
 import ConfirmActionModal from './components/ConfirmActionModal';
+import ProjectManager from './components/ProjectManager';
 
 // Import utilities
 import { parseUrlState, generateShareLink } from './utils/stateCompressor';
@@ -84,7 +86,7 @@ const formatSyncTime = (iso) => {
 };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('inspection'); // 'inspection' | 'report' | 'settings'
+  const [activeTab, setActiveTab] = useState('inspection'); // 'inspection' | 'report' | 'settings' | 'projects'
   const [items, setItems] = useState([]);
   const [committee, setCommittee] = useState(DEFAULT_COMMITTEE);
   
@@ -177,10 +179,11 @@ export default function App() {
     setItems(currentItems);
     setHasResetBackup(inspectionRepository.hasResetBackup(pid));
 
-    // Connect to the shared cloud workspace. Until the first server snapshot lands,
+    // Connect to this project's cloud workspace. Until the first server snapshot lands,
     // cloudSync ignores outgoing writes, so this device's (possibly stale) local copy
     // can never overwrite what other devices already saved.
     cloudSync.start({
+      projectId: inspectionRepository.getCloudProjectId(pid),
       items: currentItems,
       committee: currentCommittee,
       config: inspectionRepository.getProjectConfig(pid),
@@ -206,6 +209,11 @@ export default function App() {
         } else if (kind === 'adopted') {
           showToast(`☁️ ดึงข้อมูลล่าสุดจากคลาวด์ ${count} รายการมาแสดงแล้ว (ข้อมูลเดิมในเครื่องถูกสำรองไว้)`);
         }
+      },
+      // A photo too large for one Firestore document (~1 MB) never got synced -- warn
+      // instead of letting it silently vanish on the next reload/other device.
+      onItemError: (item) => {
+        showToast(`⚠️ รูปภาพของรายการ #${item?.id ?? '?'} มีขนาดใหญ่เกินไป ระบบไม่สามารถอัปโหลดขึ้นคลาวด์ได้ กรุณาถ่ายรูปใหม่หรือเลือกไฟล์ที่มีขนาดเล็กลงแล้วอัปโหลดอีกครั้ง`);
       }
     });
   }, []);
@@ -259,6 +267,12 @@ export default function App() {
       progressPercent: totalItems > 0 ? Math.round((passedCount / totalItems) * 100) : 0
     };
   }, [items]);
+
+  // MAPPING_FIXES / auto-match is a verified table for the original 49-item project only.
+  const isLegacyProject = useMemo(
+    () => inspectionRepository.isLegacyProject(activeProjectId),
+    [activeProjectId]
+  );
 
   const categories = useMemo(() => {
     const set = new Set();
@@ -354,6 +368,18 @@ export default function App() {
     });
     setItems(updatedItems);
     showToast(`📝 บันทึกผลการตรวจรับรายการที่ #${updatedItem.id} เรียบร้อย`);
+  };
+
+  // Switching or creating a project reloads the page rather than hot-swapping the
+  // Firestore listeners mid-session -- simpler and safer for something that only
+  // happens a few times a month, not a hot path worth the added complexity.
+  const handleSwitchProject = (id) => {
+    inspectionRepository.setActiveProjectId(id);
+    window.location.reload();
+  };
+
+  const handleProjectCreated = () => {
+    window.location.reload();
   };
 
   const handleSaveCommittee = () => {
@@ -620,6 +646,18 @@ export default function App() {
             <span>⚙️ ตั้งค่าโครงการ & กรรมการ</span>
           </button>
 
+          <button
+            onClick={() => { setActiveTab('projects'); setIsMobileMenuOpen(false); }}
+            className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all cursor-pointer ${
+              activeTab === 'projects'
+                ? 'bg-amber-400 text-slate-950 shadow-md font-black'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <FolderKanban className="w-5 h-5 shrink-0" />
+            <span className="truncate">🗂️ {projectConfig?.projectTitle || 'จัดการโครงการ (Portal)'}</span>
+          </button>
+
         </nav>
 
         {/* Quick Tools & Share */}
@@ -629,7 +667,7 @@ export default function App() {
             className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
           >
             <CheckCircle2 className="w-4 h-4" />
-            <span>จับคู่รูปภาพอัตโนมัติ (49 ภาพ)</span>
+            <span>{isLegacyProject ? 'จับคู่รูปภาพอัตโนมัติ (49 ภาพ)' : 'จัดการรูปภาพพัสดุ'}</span>
           </button>
 
           <button
@@ -653,6 +691,7 @@ export default function App() {
               {activeTab === 'inspection' && '📋 ระบบบันทึกการตรวจรับพัสดุคอมพิวเตอร์'}
               {activeTab === 'report' && '📄 ระบบออกรายงานสรุปพร้อมรูปภาพหลักฐานการตรวจรับ'}
               {activeTab === 'settings' && '⚙️ ตั้งค่าข้อมูลโครงการ คณะกรรมการ และการนำเข้าพัสดุ'}
+              {activeTab === 'projects' && '🗂️ Portal งานตรวจรับ — สลับ/สร้าง/โคลนโครงการ'}
             </h2>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
               คำสั่งเทศบาลนครนครสวรรค์ ที่ ๘๖๔/๒๕๖๙ (งบประมาณ พ.ศ. 2569)
@@ -902,7 +941,9 @@ export default function App() {
                     <CheckCircle2 className="w-6 h-6 text-emerald-600" />
                     <h4 className="font-bold text-base text-emerald-950">เปิดระบบจัดจับคู่รูปภาพอัตโนมัติ</h4>
                     <p className="text-xs text-emerald-800 leading-relaxed font-normal">
-                      ตรวจทานการจับคู่รูปภาพพัสดุจริง 49 รายการ และจัดสรรอัตโนมัติให้ตรงกับสเปก
+                      {isLegacyProject
+                        ? 'ตรวจทานการจับคู่รูปภาพพัสดุจริง 49 รายการ และจัดสรรอัตโนมัติให้ตรงกับสเปก'
+                        : 'ตรวจทานรูปภาพพัสดุของโครงการนี้ ค้นหา ทำเครื่องหมายรายการที่ไม่มีรูป และส่งออกข้อมูลรูปภาพ'}
                     </p>
                   </button>
 
@@ -1053,6 +1094,17 @@ export default function App() {
             </div>
           )}
 
+          {/* TAB 4: PROJECT PORTAL */}
+          {activeTab === 'projects' && (
+            <div className="max-w-6xl mx-auto">
+              <ProjectManager
+                activeProjectId={activeProjectId}
+                onSwitchProject={handleSwitchProject}
+                onProjectCreated={handleProjectCreated}
+              />
+            </div>
+          )}
+
         </div>
 
       </main>
@@ -1069,6 +1121,7 @@ export default function App() {
       {isImageMapperOpen && (
         <ImageMappingManager
           items={items}
+          isLegacyProject={isLegacyProject}
           onClose={() => setIsImageMapperOpen(false)}
           onSaveAll={(updatedData) => {
             setItems(updatedData);

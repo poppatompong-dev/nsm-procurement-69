@@ -60,12 +60,18 @@ export default function ItemDetailModal({ item, onClose, onSave }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Uploaded photos are data URLs and belong in exactly one field. Duplicating the
+    // same (often 500KB+) string into both `image` and `images.product` used to nearly
+    // double this item's Firestore document size and silently blow past its 1 MiB
+    // per-document limit, which failed the whole sync batch -- the classic "uploaded
+    // photo disappears later" bug.
+    const isDataUrl = customImage.startsWith('data:');
     const updatedItem = {
       ...item,
       inspectStatus,
       notes,
       serial_number: serialNumber,
-      image: customImage,
+      image: isDataUrl ? '' : customImage,
       images: {
         ...item.images,
         product: customImage,

@@ -86,6 +86,20 @@ export const parseUrlState = (currentItems) => {
  * @param {Object} projectMeta - { id, name } of the project this link is generated from
  * @returns {string} The full shareable URL
  */
+// Uploaded photos are base64 data URLs (hundreds of KB) -- embedding one in a URL hash
+// makes the link long enough to get silently truncated or rejected by browsers/chat
+// apps, which reads to whoever opens it as "the photo didn't come through". Photos
+// already live in Cloud Firestore, so the share link only needs to carry the small
+// filename-style references, never inline image data.
+const stripInlinePhotos = (images) => {
+  if (!images || typeof images !== 'object') return images;
+  const clean = {};
+  for (const [key, value] of Object.entries(images)) {
+    clean[key] = typeof value === 'string' && value.startsWith('data:') ? '' : value;
+  }
+  return clean;
+};
+
 export const generateShareLink = (committee, items, uiState = {}, projectMeta = {}) => {
   try {
     const state = {
@@ -111,7 +125,7 @@ export const generateShareLink = (committee, items, uiState = {}, projectMeta = 
           sn: i.serial_number,
           mc: i.mac_address,
           an: i.asset_number,
-          img: i.images,
+          img: stripInlinePhotos(i.images),
           ch: i.checklist,
           tl: i.timeline,
           hs: i.history,

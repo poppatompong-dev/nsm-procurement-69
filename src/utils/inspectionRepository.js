@@ -402,6 +402,14 @@ export const inspectionRepository = {
       const itemsJson = pid ? localStorage.getItem(projectItemsKey(pid)) : null;
       if (itemsJson) {
         const loadedItems = JSON.parse(itemsJson);
+
+        // MAPPING_FIXES is a verified 1:1 table for the original 49-item computer-supplies
+        // project only. Other projects reuse the same small item ids (1, 2, 3...), so
+        // applying this table outside its home project would silently paste that
+        // project's photos onto unrelated equipment.
+        const isLegacyProject = inspectionRepository.getProjectMeta(pid)?.isLegacyDefault === true;
+        if (!isLegacyProject) return loadedItems;
+
         // Auto-heal missing or duplicate images if items have legacy empty/duplicate values
         let healed = false;
         const result = loadedItems.map(item => {
@@ -428,9 +436,14 @@ export const inspectionRepository = {
   },
 
   /**
-   * Auto-match 100% of images for all 49 items
+   * Auto-match 100% of images for all 49 items. Scoped to the original legacy project --
+   * MAPPING_FIXES is that project's verified photo table, not a general-purpose matcher.
    */
   autoMatchAllImages: (items, projectId = null) => {
+    const pid = projectId || inspectionRepository.getActiveProjectId();
+    const isLegacyProject = inspectionRepository.getProjectMeta(pid)?.isLegacyDefault === true;
+    if (!isLegacyProject) return items;
+
     const updated = items.map(item => {
       if (item.images?.noPhotoConfirmed) return item;
       const targetImg = MAPPING_FIXES[item.id];
@@ -446,8 +459,25 @@ export const inspectionRepository = {
       }
       return item;
     });
-    inspectionRepository.saveItems(updated, projectId);
+    inspectionRepository.saveItems(updated, pid);
     return updated;
+  },
+
+  /** Whether a project is the original legacy 49-item project (owns MAPPING_FIXES/seed data). */
+  isLegacyProject: (projectId = null) => {
+    const pid = projectId || inspectionRepository.getActiveProjectId();
+    return inspectionRepository.getProjectMeta(pid)?.isLegacyDefault === true;
+  },
+
+  /**
+   * Resolve which Cloud Firestore workspace (`projects/{cloudProjectId}`) a local project
+   * id maps to. The legacy project's real data already lives at `projects/main` on the
+   * cloud -- it must keep that exact path forever. Every other project gets its own
+   * workspace named after its own generated id.
+   */
+  getCloudProjectId: (projectId = null) => {
+    const pid = projectId || inspectionRepository.getActiveProjectId();
+    return inspectionRepository.isLegacyProject(pid) ? 'main' : pid;
   },
 
   /**

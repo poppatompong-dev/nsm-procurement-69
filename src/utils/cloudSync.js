@@ -21,18 +21,28 @@ import { getDb } from './firebaseClient';
  * stale dataset. This module makes Cloud Firestore the shared source of truth and
  * demotes localStorage to an offline cache/mirror.
  *
- * Data model (single shared workspace, matching the single-project UI in App.jsx):
- *   projects/main                -> { committee, config, seeded, updatedAt }
- *   projects/main/items/{itemId} -> one document per inspection item
+ * Data model (one workspace per project, resolved by inspectionRepository.getCloudProjectId --
+ * the original project keeps the literal id 'main' it was seeded under; every later project
+ * gets its own workspace named after its own generated project id):
+ *   projects/{cloudProjectId}                -> { committee, config, seeded, updatedAt }
+ *   projects/{cloudProjectId}/items/{itemId} -> one document per inspection item
  *
  * One document per item (rather than one big array document) matters: two people can
  * grade two different items at the same time without either overwriting the other.
+ *
+ * This module is a page-lifetime singleton scoped to whichever project was active when
+ * start() was called. Switching the active project is handled by reloading the page
+ * (see App.jsx) rather than hot-swapping listeners mid-session.
  */
 
-const CLOUD_PROJECT_ID = 'main';
 const RETRY_MS = 15000;
 const BATCH_OP_LIMIT = 400;      // Firestore allows 500 writes per batch
 const BATCH_BYTE_LIMIT = 7_000_000; // Firestore allows ~10 MB per commit; leave headroom
+// Firestore hard-caps a single document at 1 MiB (1,048,576 bytes). Leave headroom for
+// field-name overhead and Firestore's own per-document bookkeeping.
+const MAX_ITEM_DOC_BYTES = 900_000;
+const WRITE_RETRY_ATTEMPTS = 3;
+const WRITE_RETRY_BASE_MS = 2000;
 const MAX_BACKUPS = 10;
 
 // Snapshot of this device's localStorage data taken the first time it adopts cloud
@@ -44,6 +54,7 @@ const CLOUD_META_FIELDS = ['_updatedAt', '_updatedBy', '_deleted', '_deletedAt']
 const state = {
   started: false,
   ready: false,
+  cloudProjectId: null,
   status: 'idle', // idle | connecting | synced | saving | offline | error
   lastSyncAt: null,
   known: new Map(), // itemId(string) -> item as last seen on the cloud
@@ -99,10 +110,10 @@ const sortItems = (items) => [...items].sort((a, b) => {
   return String(a.id).localeCompare(String(b.id));
 });
 
-const projectRef = () => doc(getDb(), 'projects', CLOUD_PROJECT_ID);
-const itemsRef = () => collection(getDb(), 'projects', CLOUD_PROJECT_ID, 'items');
-const backupsRef = () => collection(getDb(), 'projects', CLOUD_PROJECT_ID, 'backups');
-const backupItemsRef = (backupId) => collection(getDb(), 'projects', CLOUD_PROJECT_ID, 'backups', backupId, 'items');
+const projectRef = () => doc(getDb(), 'projects', state.cloudProjectId);
+const itemsRef = () => collection(getDb(), 'projects', state.cloudProjectId, 'items');
+const backupsRef = () => collection(getDb(), 'projects', state.cloudProjectId, 'backups');
+const backupItemsRef = (backupId) => collection(getDb(), 'projects', state.cloudProjectId, 'backups', backupId, 'items');
 
 /** Live (non-tombstoned) item documents from a query snapshot. */
 const liveItems = (snap) => snap.docs
@@ -131,7 +142,13 @@ const enqueue = (fn) => {
 
 const estimateBytes = (value) => {
   try {
-    return JSON.stringify(value)?.length || 0;
+    const json = JSON.stringify(value);
+    if (!json) return 0;
+    // Thai text is multi-byte in UTF-8 but single-length in a JS string, so measure
+    // actual encoded bytes rather than .length -- what matters here is what Firestore
+    // will actually store.
+    if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(json).length;
+    return json.length;
   } catch {
     return 0;
   }
@@ -162,6 +179,25 @@ const commitInChunks = async (ops) => {
   }
 
   if (count > 0) await batch.commit();
+};
+
+/**
+ * Retry transient failures (network blips, momentary quota errors) a few times with
+ * backoff before giving up. A batch commit is all-or-nothing, so without this a single
+ * flaky request could fail every item queued in the same write.
+ */
+const commitWithRetry = async (ops, attempts = WRITE_RETRY_ATTEMPTS) => {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await commitInChunks(ops);
+      return;
+    } catch (e) {
+      lastErr = e;
+      if (i < attempts - 1) await new Promise(r => setTimeout(r, WRITE_RETRY_BASE_MS * (i + 1)));
+    }
+  }
+  throw lastErr;
 };
 
 /* -------------------------------------------------------------- bootstrap */
@@ -314,11 +350,12 @@ export const cloudSync = {
    * Boot cloud sync. `items` / `committee` / `config` are this device's current
    * localStorage data, used only to seed an empty cloud workspace.
    */
-  start: ({ items = [], committee = [], config = {}, onItems, onMeta, onStatus, onNotice }) => {
+  start: ({ projectId = 'main', items = [], committee = [], config = {}, onItems, onMeta, onStatus, onNotice, onItemError }) => {
     if (state.started) return;
     state.started = true;
+    state.cloudProjectId = projectId;
     state.bootContext = { items, committee, config };
-    state.handlers = { onItems, onMeta, onStatus, onNotice };
+    state.handlers = { onItems, onMeta, onStatus, onNotice, onItemError };
 
     connect().catch(e => {
       console.error('Cloud sync failed to start', e);
@@ -346,15 +383,30 @@ export const cloudSync = {
 
     const nextIds = new Set(items.map(itemKey));
     const ops = [];
+    // Only merged into state.known once the write actually succeeds -- marking an item
+    // "known" (synced) before Firestore confirms it used to mean a failed write was
+    // never retried, and looked identical to a successful one, on this device.
+    const pendingKnown = new Map();
 
     items.forEach(item => {
       const key = itemKey(item);
       if (!key || key === 'undefined') return;
       const known = state.known.get(key);
       if (known && deepEqual(known, item)) return;
-      state.known.set(key, item);
+
+      const bytes = estimateBytes(item);
+      if (bytes > MAX_ITEM_DOC_BYTES) {
+        // Too big for one Firestore document (almost always an oversized photo).
+        // Skip it rather than let it fail -- and take -- the whole batch, and tell the
+        // caller so the user can be warned instead of the photo silently vanishing.
+        console.error(`Item #${key} is ${bytes} bytes, over the Firestore document limit; not syncing it`);
+        state.handlers.onItemError?.(item, bytes);
+        return;
+      }
+
+      pendingKnown.set(key, item);
       ops.push({
-        bytes: estimateBytes(item),
+        bytes,
         apply: (batch) => batch.set(doc(itemsRef(), key), {
           ...sanitize(item),
           _updatedAt: serverTimestamp()
@@ -364,7 +416,7 @@ export const cloudSync = {
 
     [...state.known.keys()].forEach(key => {
       if (nextIds.has(key)) return;
-      state.known.delete(key);
+      pendingKnown.set(key, null); // tombstone marker
       ops.push({
         bytes: 200,
         apply: (batch) => batch.set(doc(itemsRef(), key), {
@@ -376,7 +428,15 @@ export const cloudSync = {
 
     if (ops.length === 0) return;
     setStatus('saving');
-    return enqueue(() => commitInChunks(ops));
+    return enqueue(async () => {
+      await commitWithRetry(ops);
+      // Only reached on success -- a thrown error here leaves state.known untouched,
+      // so the next saveItems() call for these same items retries them automatically.
+      pendingKnown.forEach((item, key) => {
+        if (item === null) state.known.delete(key);
+        else state.known.set(key, item);
+      });
+    });
   },
 
   pushCommittee: (committee) => {
@@ -411,18 +471,27 @@ export const cloudSync = {
     setStatus('saving');
     const remoteKeys = new Set(state.known.keys());
     const ops = [];
+    const pendingKnown = new Map();
 
     items.forEach(item => {
       const key = itemKey(item);
       remoteKeys.delete(key);
-      state.known.set(key, item);
+
+      const bytes = estimateBytes(item);
+      if (bytes > MAX_ITEM_DOC_BYTES) {
+        console.error(`Item #${key} is ${bytes} bytes, over the Firestore document limit; not syncing it`);
+        state.handlers.onItemError?.(item, bytes);
+        return;
+      }
+
+      pendingKnown.set(key, item);
       ops.push({
-        bytes: estimateBytes(item),
+        bytes,
         apply: (batch) => batch.set(doc(itemsRef(), key), { ...sanitize(item), _updatedAt: serverTimestamp() })
       });
     });
     remoteKeys.forEach(key => {
-      state.known.delete(key);
+      pendingKnown.set(key, null);
       ops.push({
         bytes: 200,
         apply: (batch) => batch.set(doc(itemsRef(), key), { _deleted: true, _deletedAt: serverTimestamp() }, { merge: true })
@@ -438,7 +507,11 @@ export const cloudSync = {
       }, { merge: true })
     });
 
-    await enqueue(() => commitInChunks(ops));
+    await enqueue(() => commitWithRetry(ops));
+    pendingKnown.forEach((item, key) => {
+      if (item === null) state.known.delete(key);
+      else state.known.set(key, item);
+    });
     markSynced();
   },
 
@@ -544,5 +617,6 @@ export const cloudSync = {
     state.unsubs = [];
     state.started = false;
     state.ready = false;
+    state.cloudProjectId = null;
   }
 };
