@@ -12,14 +12,26 @@ rules_version = '2';
 // (see generateProjectId() in src/utils/inspectionRepository.js) -- so the id format
 // itself is the allow-list, not a guessable/enumerable value.
 //
-// If this ever needs tightening further, the intended upgrade is Google sign-in with
-// an allow-list of committee e-mails checked here (request.auth.token.email in [...]).
+// Broadening from one fixed workspace ('main') to any proj_* id meaningfully widened
+// the blast radius for an anonymous client spamming brand-new workspaces (each with an
+// uncapped items/backups/events subcollection) -- this plan is on the Firebase free
+// tier, so unbounded write volume is a real quota/availability risk, not just a
+// hypothetical. What's added below is a rules-only speed bump, not a real fix:
+//   - the id must actually match the shape generateProjectId() produces, not just any
+//     'proj_' prefix
+//   - every document (not just the project doc) is capped at <50 top-level fields
+//   - subcollection writes (items/backups/events) require the parent project doc to
+//     already exist, matching how the app itself always creates it first
+// None of this stops a client that's willing to mimic the real id format and pre-create
+// a project doc -- an unauthenticated client can still do that. Actually closing this
+// gap needs the same upgrade already called out below: Google sign-in with an allow-list
+// of committee e-mails (request.auth.token.email in [...]), or Firebase App Check.
 service cloud.firestore {
   match /databases/{database}/documents {
 
     match /projects/{projectId} {
-      allow read: if projectId == 'main' || projectId.matches('proj_.*');
-      allow write: if (projectId == 'main' || projectId.matches('proj_.*'))
+      allow read: if projectId == 'main' || projectId.matches('proj_[0-9a-z]+_[0-9a-z]+');
+      allow write: if (projectId == 'main' || projectId.matches('proj_[0-9a-z]+_[0-9a-z]+'))
                    && request.resource.data.size() < 50;
 
       // Covers:
@@ -29,7 +41,10 @@ service cloud.firestore {
       //   backups/{backupId}[/items/...]  automatic pre-destructive-operation snapshots
       //   events/{eventId}                project activity log
       match /{document=**} {
-        allow read, write: if projectId == 'main' || projectId.matches('proj_.*');
+        allow read: if projectId == 'main' || projectId.matches('proj_[0-9a-z]+_[0-9a-z]+');
+        allow write: if (projectId == 'main' || projectId.matches('proj_[0-9a-z]+_[0-9a-z]+'))
+                     && request.resource.data.size() < 50
+                     && exists(/databases/$(database)/documents/projects/$(projectId));
       }
     }
 

@@ -410,10 +410,17 @@ export const inspectionRepository = {
         const isLegacyProject = inspectionRepository.getProjectMeta(pid)?.isLegacyDefault === true;
         if (!isLegacyProject) return loadedItems;
 
-        // Auto-heal missing or duplicate images if items have legacy empty/duplicate values
+        // Auto-heal missing or duplicate images if items have legacy empty/duplicate values.
+        // Gated on `!hasProductPhoto`: images.product is the field everything actually
+        // displays (see getImageUrl), so if it already holds something -- including a
+        // freshly uploaded data: URL, where `image` is deliberately left blank to avoid
+        // double-storing the same photo -- this must never overwrite it with the stock
+        // catalog photo. Without this guard, uploading a real evidence photo got silently
+        // replaced by the generic MAPPING_FIXES photo on the very next reload.
         let healed = false;
         const result = loadedItems.map(item => {
-          if (!item.images?.noPhotoConfirmed && MAPPING_FIXES[item.id] && (!item.image || item.image === '' || (item.id === 41 && item.image === '87163_0.jpg') || (item.id === 42 && !item.image))) {
+          const hasProductPhoto = !!item.images?.product;
+          if (!hasProductPhoto && !item.images?.noPhotoConfirmed && MAPPING_FIXES[item.id] && (!item.image || item.image === '' || (item.id === 41 && item.image === '87163_0.jpg') || (item.id === 42 && !item.image))) {
             healed = true;
             const targetImg = MAPPING_FIXES[item.id];
             return {

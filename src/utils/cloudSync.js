@@ -507,10 +507,15 @@ export const cloudSync = {
       }, { merge: true })
     });
 
-    await enqueue(() => commitWithRetry(ops));
-    pendingKnown.forEach((item, key) => {
-      if (item === null) state.known.delete(key);
-      else state.known.set(key, item);
+    await enqueue(async () => {
+      await commitWithRetry(ops);
+      // Merged inside the write-chain callback, like pushItems -- otherwise a
+      // concurrent enqueue()'d write chained on right after this one's commit
+      // resolves could read state.known before this merge applies.
+      pendingKnown.forEach((item, key) => {
+        if (item === null) state.known.delete(key);
+        else state.known.set(key, item);
+      });
     });
     markSynced();
   },
