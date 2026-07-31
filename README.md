@@ -13,6 +13,19 @@
 
 ---
 
+## 🛠️ เทคโนโลยีที่ใช้ในโครงการ (Tech Stack & Architecture)
+
+| ส่วนประกอบ (Component) | เทคโนโลยี / ไลบรารี (Technology) | รายละเอียด (Description) |
+| :--- | :--- | :--- |
+| **Frontend Framework** | **React 19 + Vite 8** | สถาปัตยกรรม SPA ประสิทธิภาพสูง โหลดเร็ว แสดงผลทันที |
+| **Styling & UI** | **Tailwind CSS v4 + Lucide Icons** | ออกแบบ UI แบบ Modern Dashboard, Responsive รองรับมือถือและ A4 Print Mode |
+| **Backend & Cloud Services** | **Firebase Hosting + Cloud Firestore** | โฮสติ้งความเร็วสูงและฐานข้อมูล Real-time Sync ข้อมูลข้ามอุปกรณ์ |
+| **State & Offline Storage** | **LocalStorage + Cloud Sync Engine** | ทำงานได้แม้ไม่มีอินเทอร์เน็ต (Offline-first) พร้อม Auto-sync เมื่อเชื่อมต่อ |
+| **Data Processing & Export** | **SheetJS (xlsx) + Canvas API** | นำเข้า/ส่งออก Excel (.xlsx) และย่อขนาดภาพถ่ายอัตโนมัติก่อนซิงค์ Cloud |
+| **Code Quality & Build** | **Oxlint + Vite Builder** | เครื่องมือ Linting ความเร็วสูง พร้อมระบบคอมไพล์โปรดักชัน |
+
+---
+
 ## ⚡ คุณลักษณะเด่นของระบบ (Core Features - v1.2.0)
 
 1.  **📋 บันทึกตรวจรับพัสดุรายชิ้น (Inspection Management):**
